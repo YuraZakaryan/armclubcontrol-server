@@ -4,9 +4,9 @@ export * from './subscription';
 export * from './application';
 import { User } from '../user/user.schema';
 import { ObjectId, Types } from 'mongoose';
-import { CreateUserDto } from '../user/dto/create-user.dto';
-export interface IGenerateRefreshToken extends CreateUserDto {
-  id?: ObjectId;
+import { ERole } from '../user/dto/create-user.dto';
+export interface IGenerateRefreshToken {
+  sub: Types.ObjectId;
 }
 export interface IGenerateAccessToken extends User {
   id?: ObjectId;

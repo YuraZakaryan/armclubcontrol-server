@@ -18,23 +18,18 @@ export class UserService {
     return this.userModel.create({
       ...dto,
       role: !dto.role ? 'USER' : dto.role,
-      refreshToken: await this.generateRefreshToken(dto),
+      refreshToken: '',
     });
   }
 
-  async generateRefreshToken(user: IGenerateRefreshToken) {
-    const payload = {
-      sub: user.id,
-      username: user.username,
-      type: 'refresh',
-    };
+  async generateRefreshToken(payload: any) {
     return this.jwtService.sign(payload);
   }
   async findUserByUsername(username: string) {
-    return this.userModel.findOne({ username });
+    return this.userModel.findOne({ username }).populate('clubs');
   }
   async findUserByEmail(email: string) {
-    return this.userModel.findOne({ email });
+    return this.userModel.findOne({ email }).populate('clubs');
   }
   async findUserByUsernameOrEmail(login: string) {
     return (

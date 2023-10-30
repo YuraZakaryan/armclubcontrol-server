@@ -1,16 +1,16 @@
+import * as bcrypt from 'bcryptjs';
+import { Model } from 'mongoose';
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import * as bcrypt from 'bcryptjs';
-import jwt_decode from 'jwt-decode';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
 import { UserService } from '../user/user.service';
 import { LoginUserDto } from './dto/login-user.dto';
 import { CreateUserDto } from '../user/dto/create-user.dto';
 import { User } from '../user/user.schema';
-import { IGenerateAccessToken, IGenerateRefreshToken } from '../types';
+import { IGenerateAccessToken } from '../types';
 import { MeDto } from './dto/me-dto';
 import { Response } from 'express';
+import { EXPIRE_TIME_ACCESS } from '../constants';
 
 @Injectable()
 export class AuthService {
@@ -73,33 +73,33 @@ export class AuthService {
     }
   }
 
-  async updateRefreshToken(refresh: string) {
-    const decodedRefresh = jwt_decode<IGenerateRefreshToken>(refresh);
-    const user = await this.userService.findUserByUsername(
-      decodedRefresh.username,
-    );
-
-    if (!user || user.refreshToken !== refresh) {
-      throw new HttpException('Invalid refresh token', HttpStatus.FORBIDDEN);
-    }
-
-    const newRefreshToken = await this.userService.generateRefreshToken(user);
-    const updatedUser = await this.userModel
-      .findOneAndUpdate(
-        { username: decodedRefresh.username },
-        { refreshToken: newRefreshToken },
-        { new: true },
-      )
-      .exec();
-    if (!updatedUser) {
-      throw new HttpException(
-        'Failed to update user',
-        HttpStatus.INTERNAL_SERVER_ERROR,
-      );
-    }
-
-    return await this.generateAuthTokens(updatedUser);
-  }
+  // async updateRefreshToken(refresh: string) {
+  //   const decodedRefresh = jwt_decode<IGenerateRefreshToken>(refresh);
+  //   const user = await this.userService.findUserByUsername(
+  //     decodedRefresh.username,
+  //   );
+  //
+  //   if (!user || user.refreshToken !== refresh) {
+  //     throw new HttpException('Invalid refresh token', HttpStatus.FORBIDDEN);
+  //   }
+  //
+  //   const newRefreshToken = await this.userService.generateRefreshToken(user);
+  //   const updatedUser = await this.userModel
+  //     .findOneAndUpdate(
+  //       { username: decodedRefresh.username },
+  //       { refreshToken: newRefreshToken },
+  //       { new: true },
+  //     )
+  //     .exec();
+  //   if (!updatedUser) {
+  //     throw new HttpException(
+  //       'Failed to update user',
+  //       HttpStatus.INTERNAL_SERVER_ERROR,
+  //     );
+  //   }
+  //
+  //   return await this.generateAuthTokens(updatedUser);
+  // }
 
   async me(req: { user: MeDto }): Promise<User> {
     const token: MeDto = req.user;
@@ -123,8 +123,14 @@ export class AuthService {
     };
 
     return {
-      access_token: this.jwtService.sign(payload),
-      refresh_token: user.refreshToken,
+      user,
+      tokens: {
+        access_token: this.jwtService.sign(payload),
+        refresh_token: await this.userService.generateRefreshToken(payload),
+        expiresIn: new Date().setTime(
+          new Date().setTime(new Date().getTime() + EXPIRE_TIME_ACCESS * 1000),
+        ),
+      },
     };
   }
 }

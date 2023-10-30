@@ -41,8 +41,7 @@ import { FindOneParams } from '../types';
 export class ClubController {
   constructor(private clubService: ClubService) {}
 
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.MODERATOR, UserRole.ADMIN)
+  @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Create club' })
   @ApiResponse({
     status: HttpStatus.CREATED,
@@ -62,7 +61,7 @@ export class ClubController {
     @UploadedFile() picture: Express.Multer.File,
     @Body() dto: CreateClubDto,
     @Res({ passthrough: true }) res: Response,
-  ): Promise<Club> {
+  ) {
     return this.clubService.create(dto, picture, res);
   }
 

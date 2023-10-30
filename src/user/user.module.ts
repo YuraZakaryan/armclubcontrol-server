@@ -4,7 +4,7 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { User, UserSchema } from './user.schema';
 import { UserController } from './user.controller';
 import { JwtModule } from '@nestjs/jwt';
-import { PRIVATE_KEY_REFRESH } from '../constants';
+import { EXPIRE_TIME_REFRESH, PRIVATE_KEY_REFRESH } from '../constants';
 
 @Module({
   controllers: [UserController],
@@ -13,6 +13,7 @@ import { PRIVATE_KEY_REFRESH } from '../constants';
     MongooseModule.forFeature([{ name: User.name, schema: UserSchema }]),
     JwtModule.register({
       secret: PRIVATE_KEY_REFRESH || 'SECRET_KEY_REFRESH',
+      signOptions: { expiresIn: EXPIRE_TIME_REFRESH + 'd' },
     }),
   ],
 })
