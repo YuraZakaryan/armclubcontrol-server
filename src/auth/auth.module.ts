@@ -4,7 +4,7 @@ import { AuthService } from './auth.service';
 import { MongooseModule } from '@nestjs/mongoose';
 import { User, UserSchema } from '../user/user.schema';
 import { JwtModule } from '@nestjs/jwt';
-import { PRIVATE_KEY_ACCESS } from '../constants';
+import { EXPIRE_TIME_ACCESS, PRIVATE_KEY_ACCESS } from '../constants';
 import { UserService } from '../user/user.service';
 import { PassportModule } from '@nestjs/passport';
 
@@ -16,7 +16,7 @@ import { PassportModule } from '@nestjs/passport';
     JwtModule.register({
       global: true,
       secret: PRIVATE_KEY_ACCESS || 'PRIVATE_KEY_ACCESS',
-      signOptions: { expiresIn: '86400s' },
+      signOptions: { expiresIn: EXPIRE_TIME_ACCESS + 's' },
     }),
     PassportModule.register({ defaultStrategy: 'jwt' }),
   ],

@@ -58,23 +58,23 @@ export class AuthController {
     return this.authService.registration(dto, res);
   }
 
-  @UseGuards(JwtAuthGuard)
-  @ApiOperation({ summary: 'refresh' })
-  @ApiResponse({ status: HttpStatus.OK, description: 'User is valid' })
-  @ApiResponse({
-    status: HttpStatus.FORBIDDEN,
-    description: 'Refresh token is invalid',
-  })
-  @ApiResponse({
-    status: HttpStatus.INTERNAL_SERVER_ERROR,
-    description: 'Failed to update user',
-  })
-  @ApiResponse({ status: HttpStatus.NOT_FOUND, description: 'User not found' })
-  @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: 'Unauthorized' })
-  @Put('refresh')
-  updateRefreshToken(@Body() { refresh }: RefreshDto) {
-    return this.authService.updateRefreshToken(refresh);
-  }
+  // @UseGuards(JwtAuthGuard)
+  // @ApiOperation({ summary: 'refresh' })
+  // @ApiResponse({ status: HttpStatus.OK, description: 'User is valid' })
+  // @ApiResponse({
+  //   status: HttpStatus.FORBIDDEN,
+  //   description: 'Refresh token is invalid',
+  // })
+  // @ApiResponse({
+  //   status: HttpStatus.INTERNAL_SERVER_ERROR,
+  //   description: 'Failed to update user',
+  // })
+  // @ApiResponse({ status: HttpStatus.NOT_FOUND, description: 'User not found' })
+  // @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: 'Unauthorized' })
+  // @Put('refresh')
+  // updateRefreshToken(@Body() { refresh }: RefreshDto) {
+  //   return this.authService.updateRefreshToken(refresh);
+  // }
   @UseGuards(JwtAuthGuard)
   @ApiResponse({ status: HttpStatus.OK, description: 'User is valid' })
   @ApiResponse({ status: HttpStatus.NOT_FOUND, description: 'User not found' })

@@ -1,9 +1,13 @@
 import { OnModuleInit } from '@nestjs/common';
 import { WebSocketGateway, WebSocketServer } from '@nestjs/websockets';
-import { Server } from 'socket.io';
+import { Server, Socket } from 'socket.io';
 import { TimerService } from './timer.service';
 import { Types } from 'mongoose';
-import { CronExpression } from '@nestjs/schedule';
+
+interface ICustomTicket extends Socket {
+  timerInterval?: NodeJS.Timeout;
+}
+
 @WebSocketGateway({ cors: true })
 export class TimerGateway implements OnModuleInit {
   constructor(private timerService: TimerService) {}
@@ -12,21 +16,30 @@ export class TimerGateway implements OnModuleInit {
   server: Server;
 
   onModuleInit() {
-    this.server.on('connection', (socket) => {
+    this.server.on('connection', (socket: ICustomTicket) => {
       console.log(`User with ${socket.id} id is connected!`);
-      this.startTimer(socket);
+
+      socket.on('disconnect', () => {
+        console.log(`User with ${socket.id} id is disconnected!`);
+        if (socket.timerInterval) {
+          clearInterval(socket.timerInterval);
+        }
+      });
+
+      const club: string | string[] = socket.handshake.query.club;
+      this.startTimer(socket, club);
     });
   }
 
-  private async startTimer(socket) {
-    try {
-      const data = await this.timerService.getOne(
-        new Types.ObjectId(new Types.ObjectId('6535003d271b55fe84afe08f')),
-      );
-      socket.emit('timer-updated', JSON.stringify(data));
-    } catch (error) {
-      console.error('Error while fetching timer data:', error);
-    }
-    setTimeout(() => this.startTimer(socket), 1000);
+  private startTimer(socket: ICustomTicket, club: string | string[]) {
+    socket.timerInterval = setInterval(async () => {
+      try {
+        const clubId = Array.isArray(club) ? club[0] : club;
+        const data = await this.timerService.getOne(new Types.ObjectId(clubId));
+        socket.emit('timer-updated', JSON.stringify(data));
+      } catch (error) {
+        console.error('Error while fetching timer data:', error);
+      }
+    }, 1000);
   }
 }

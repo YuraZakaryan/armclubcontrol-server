@@ -104,7 +104,7 @@ export class ClubService {
   async getAll(count = 10, offset = 0): Promise<Array<Club>> {
     const clubs = await this.clubModel
       .find()
-      .populate('timers')
+      .populate('timers ratings')
       .skip(offset)
       .limit(count)
       .exec();
