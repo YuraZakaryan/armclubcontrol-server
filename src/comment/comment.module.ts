@@ -5,6 +5,7 @@ import { Comment, CommentSchema } from './schemas/comment.schema';
 import { CommentController } from './comment.controller';
 import { SubComment, SubCommentSchema } from './schemas/subcomment.schema';
 import { Club, ClubSchema } from '../club/club.schema';
+import { User, UserSchema } from '../user/user.schema';
 
 @Module({
   imports: [
@@ -12,6 +13,7 @@ import { Club, ClubSchema } from '../club/club.schema';
       { name: Club.name, schema: ClubSchema },
       { name: Comment.name, schema: CommentSchema },
       { name: SubComment.name, schema: SubCommentSchema },
+      { name: User.name, schema: UserSchema },
     ]),
   ],
   controllers: [CommentController],

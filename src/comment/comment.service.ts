@@ -9,11 +9,14 @@ import { Response } from 'express';
 import { MeDto } from '../auth/dto/me-dto';
 import { Club } from '../club/club.schema';
 import { checkAccess } from '../logic';
+import { User } from '../user/user.schema';
 @Injectable()
 export class CommentService {
   constructor(
     @InjectModel(Club.name)
     private clubModel: Model<Club>,
+    @InjectModel(User.name)
+    private userModel: Model<User>,
     @InjectModel(Comment.name)
     private commentModel: Model<Comment>,
     @InjectModel(SubComment.name)
@@ -24,6 +27,11 @@ export class CommentService {
     const club = await this.clubModel.findById(dto.club);
     if (!club) {
       throw new HttpException('Club not found!', HttpStatus.NOT_FOUND);
+    }
+    const user = await this.userModel.findById(dto.author);
+
+    if (!user) {
+      throw new HttpException('User not found!', HttpStatus.NOT_FOUND);
     }
     const comment = await this.commentModel.create({
       ...dto,
