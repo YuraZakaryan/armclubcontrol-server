@@ -41,7 +41,7 @@ export class TimerController {
     console.log(dto);
     return this.timerService.create(dto, res);
   }
-  // @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Update timer by id' })
   @ApiResponse({ status: HttpStatus.OK, description: 'Found' })
   @ApiResponse({
@@ -63,7 +63,7 @@ export class TimerController {
   ): Promise<Timer> {
     return this.timerService.update(id, dto, res, req);
   }
-  // @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Pause timer by id' })
   @ApiResponse({
     status: HttpStatus.OK,
@@ -84,16 +84,7 @@ export class TimerController {
   ) {
     return this.timerService.start(id, req);
   }
-  // @UseGuards(JwtAuthGuard)
-  @ApiOperation({ summary: 'Start timer by id' })
-  @ApiResponse({ status: HttpStatus.OK, description: 'Timer stopped' })
-  @ApiResponse({ status: HttpStatus.NOT_FOUND, description: 'Timer not found' })
-  @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: 'Unauthorized' })
-  @ApiResponse({
-    status: HttpStatus.FORBIDDEN,
-    description: 'Access denied',
-  })
-  // @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Pause timer by id' })
   @ApiResponse({
     status: HttpStatus.OK,
@@ -114,7 +105,7 @@ export class TimerController {
   ): Promise<TMessage> {
     return this.timerService.pause(id, req);
   }
-  // @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Stop timer by id' })
   @ApiResponse({ status: HttpStatus.OK, description: 'Timer stopped' })
   @ApiResponse({ status: HttpStatus.NOT_FOUND, description: 'Timer not found' })

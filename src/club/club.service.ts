@@ -104,7 +104,7 @@ export class ClubService {
   async getAll(count = 10, offset = 0): Promise<Array<Club>> {
     const clubs = await this.clubModel
       .find()
-      .populate('timers ratings')
+      .populate('timers ratings comments')
       .skip(offset)
       .limit(count)
       .exec();
@@ -115,18 +115,25 @@ export class ClubService {
   }
 
   async getOne(id: ObjectId): Promise<Club> {
-    const club = this.clubModel
+    const club = await this.clubModel
       .findById(id)
       .populate({
         path: 'comments',
+        options: { sort: { createdAt: -1 } },
         populate: [
           {
             path: 'subComments',
             model: 'SubComment',
-            populate: {
-              path: 'answerToUser',
-              model: 'User',
-            },
+            populate: [
+              {
+                path: 'answerToUser',
+                model: 'User',
+              },
+              {
+                path: 'author',
+                model: 'User',
+              },
+            ],
           },
           {
             path: 'author',
@@ -134,7 +141,8 @@ export class ClubService {
           },
         ],
       })
-      .populate('ratings');
+      .populate('ratings timers')
+      .exec();
     if (!club) {
       throw new HttpException('Comment not found!', HttpStatus.NOT_FOUND);
     }
