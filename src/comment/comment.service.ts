@@ -2,7 +2,7 @@ import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { CreateCommentDto } from './dto/create-comment.dto';
 import { Comment } from './schemas/comment.schema';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model, ObjectId } from 'mongoose';
+import { Model, ObjectId, Types } from 'mongoose';
 import { CreateSubCommentDto } from './dto/create-sub-comment.dto';
 import { SubComment } from './schemas/subcomment.schema';
 import { Response } from 'express';
@@ -71,6 +71,7 @@ export class CommentService {
 
     throw new HttpException('Comment not found!', HttpStatus.NOT_FOUND);
   }
+
   async getAll(): Promise<Array<Comment>> {
     const comments = this.commentModel.find().populate('subComments');
     if (!comments) {
@@ -78,6 +79,7 @@ export class CommentService {
     }
     return comments;
   }
+
   async getOne(id: ObjectId): Promise<Comment> {
     const comment = await this.commentModel
       .findById(id)
@@ -87,6 +89,7 @@ export class CommentService {
     }
     return comment;
   }
+
   async delete(id: ObjectId, req: { user: MeDto }): Promise<Comment> {
     const comment = await this.commentModel.findById(id);
 
@@ -124,6 +127,7 @@ export class CommentService {
       );
     }
   }
+
   async deleteCommentByClubId(clubId: ObjectId) {
     const comments = await this.commentModel.find({ club: clubId }).exec();
     const commentIds = comments.map((comment) => comment._id);
@@ -134,6 +138,7 @@ export class CommentService {
       deletedSubComments: commentIds.length,
     };
   }
+
   async deleteSub(id: ObjectId, req: { user: MeDto }): Promise<SubComment> {
     const subComment = await this.subCommentModel.findById(id);
 
@@ -162,6 +167,49 @@ export class CommentService {
         'Parent comment not found!',
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
+    }
+  }
+  async handleLike(
+    commentModel: Model<Comment | SubComment>,
+    id: Types.ObjectId,
+    field: string,
+    req: { user: MeDto },
+  ) {
+    const userId = req.user.sub;
+    const user = await this.userModel.findById(userId);
+    if (!user) {
+      throw new HttpException('User not found', HttpStatus.NOT_FOUND);
+    }
+
+    const comment = await commentModel.findById(id);
+
+    if (!comment) {
+      throw new HttpException('Comment not found', HttpStatus.NOT_FOUND);
+    }
+
+    const existingAction = await commentModel.findOne({ [field]: userId });
+
+    if (existingAction) {
+      if (comment[field].includes(userId)) {
+        comment[field] = comment[field].filter(
+          (userId: Types.ObjectId) => !userId.equals(userId),
+        );
+        comment.like -= field === 'usersWhoLiked' ? 1 : 0;
+      } else {
+        comment[field].push(userId);
+        comment.like += field === 'usersWhoLiked' ? 1 : 0;
+      }
+      await comment.save();
+      return {
+        message: 'Like removed',
+      };
+    } else {
+      comment[field].push(userId);
+      comment.like += field === 'usersWhoLiked' ? 1 : 0;
+      await comment.save();
+      return {
+        message: 'Like added',
+      };
     }
   }
 }

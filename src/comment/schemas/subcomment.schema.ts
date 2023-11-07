@@ -18,8 +18,8 @@ export class SubComment {
   @Prop()
   like: number;
 
-  @Prop()
-  dislike: number;
+  @Prop({ type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }] })
+  usersWhoLiked: Array<Types.ObjectId>;
 
   @Prop({ type: mongoose.Schema.Types.ObjectId, ref: 'User' })
   answerToUser: Types.ObjectId;

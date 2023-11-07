@@ -141,7 +141,7 @@ export class ClubService {
           },
         ],
       })
-      .populate('ratings timers')
+      .populate('ratings timers author')
       .exec();
     if (!club) {
       throw new HttpException('Comment not found!', HttpStatus.NOT_FOUND);
