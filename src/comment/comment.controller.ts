@@ -6,6 +6,7 @@ import {
   HttpStatus,
   Param,
   Post,
+  Put,
   Req,
   Res,
   UseGuards,
@@ -13,18 +14,24 @@ import {
 import { CreateCommentDto } from './dto/create-comment.dto';
 import { Comment } from './schemas/comment.schema';
 import { CommentService } from './comment.service';
-import { ObjectId } from 'mongoose';
+import { Model, ObjectId, Types } from 'mongoose';
 import { CreateSubCommentDto } from './dto/create-sub-comment.dto';
 import { SubComment } from './schemas/subcomment.schema';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { Response } from 'express';
 import { MeDto } from '../auth/dto/me-dto';
+import { InjectModel } from '@nestjs/mongoose';
 
 @ApiTags('Comment')
 @Controller('/club/comment')
 export class CommentController {
-  constructor(private commentService: CommentService) {}
+  constructor(
+    private commentService: CommentService,
+    @InjectModel('Comment') private readonly commentModel: Model<Comment>,
+    @InjectModel('SubComment')
+    private readonly subCommentModel: Model<SubComment>,
+  ) {}
   @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Add comment' })
   @ApiResponse({
@@ -59,6 +66,65 @@ export class CommentController {
   ): Promise<SubComment> {
     return this.commentService.addSubComment(dto, res);
   }
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Like added, removed' })
+  @ApiResponse({
+    status: HttpStatus.CREATED,
+    description: 'Like added',
+  })
+  @ApiResponse({
+    status: HttpStatus.CREATED,
+    description: 'Like removed',
+  })
+  @ApiResponse({
+    status: HttpStatus.NOT_FOUND,
+    description: 'User not found',
+  })
+  @ApiResponse({
+    status: HttpStatus.NOT_FOUND,
+    description: 'Comment not found',
+  })
+  @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: 'Unauthorized' })
+  @ApiParam({ name: 'id' })
+  @Put('like/:id')
+  likeComment(@Param('id') id: Types.ObjectId, @Req() req: { user: MeDto }) {
+    return this.commentService.handleLike(
+      this.commentModel,
+      id,
+      'usersWhoLiked',
+      req,
+    );
+  }
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Like added, removed' })
+  @ApiResponse({
+    status: HttpStatus.CREATED,
+    description: 'Like added',
+  })
+  @ApiResponse({
+    status: HttpStatus.CREATED,
+    description: 'Like removed',
+  })
+  @ApiResponse({
+    status: HttpStatus.NOT_FOUND,
+    description: 'User not found',
+  })
+  @ApiResponse({
+    status: HttpStatus.NOT_FOUND,
+    description: 'Comment not found',
+  })
+  @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: 'Unauthorized' })
+  @ApiParam({ name: 'id' })
+  @Put('like/sub/:id')
+  likeSubComment(@Param('id') id: Types.ObjectId, @Req() req: { user: MeDto }) {
+    return this.commentService.handleLike(
+      this.subCommentModel,
+      id,
+      'usersWhoLiked',
+      req,
+    );
+  }
+
   @ApiOperation({ summary: 'Get all comments' })
   @ApiResponse({ status: HttpStatus.OK, description: 'Found' })
   @ApiResponse({
