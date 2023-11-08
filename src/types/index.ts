@@ -2,9 +2,11 @@ import { IsMongoId } from 'class-validator';
 
 export * from './subscription';
 export * from './application';
+
 import { User } from '../user/user.schema';
 import { ObjectId, Types } from 'mongoose';
-import { ERole } from '../user/dto/create-user.dto';
+
+
 export interface IGenerateRefreshToken {
   sub: Types.ObjectId;
 }
