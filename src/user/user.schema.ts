@@ -30,6 +30,15 @@ export class User {
   clubs: Array<Types.ObjectId>;
 
   @Prop()
+  activated: boolean;
+
+  @Prop()
+  otp: number | null;
+
+  @Prop()
+  expiresOtpIn: number | null
+
+  @Prop()
   refreshToken: string;
 }
 

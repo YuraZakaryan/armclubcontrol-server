@@ -1,10 +1,14 @@
 import {
+  Body,
   Controller,
   Get,
   HttpStatus,
   Param,
+  Put,
+  Req,
   UseGuards,
   UsePipes,
+  ValidationPipe,
 } from '@nestjs/common';
 import { UserService } from './user.service';
 import { User } from './user.schema';
@@ -12,7 +16,10 @@ import { ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { RolesGuard } from '../guard/role/role.guard';
 import { Roles, UserRole } from '../guard/role/roles.decorator';
 import { FindOneParams } from '../types';
-import { ValidationPipe } from '../pipes/validation.pipe';
+import { Types } from 'mongoose';
+import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
+import { MeDto } from 'src/auth/dto/me-dto';
+import { ConfirmAccountDto } from './dto/confirm-account.dto';
 
 @ApiTags('User')
 @Controller('/user')
@@ -37,5 +44,34 @@ export class UserController {
   @Get(':id')
   getOne(@Param() params: FindOneParams): Promise<User> {
     return this.userService.getOne(params);
+  }
+  @UseGuards(JwtAuthGuard)
+  @UsePipes(ValidationPipe)
+  @ApiOperation({ summary: 'Send OTP to mail' })
+  @ApiResponse({ status: HttpStatus.OK, description: 'OTP {{code}} successfully sended to mail {{mail}}' })
+  @ApiResponse({ status: HttpStatus.NOT_FOUND, description: 'User not found' })
+  @ApiResponse({ status: HttpStatus.FORBIDDEN, description: 'User activated previously' })
+  @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: 'Error while sending opt code to mail' })
+  @ApiParam({ name: 'id' })
+  @Get('mail/otp/:id')
+  sendOtpToMail(@Param() param: FindOneParams, @Req() req: { user: MeDto }) {
+    return this.userService.sendOtpToMail(param, req);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @UsePipes(ValidationPipe)
+  @ApiOperation({ summary: 'Confirm account' })
+  @ApiResponse({ status: HttpStatus.OK, description: 'Account {{mail}} successfully activated!' })
+  @ApiResponse({ status: HttpStatus.NOT_FOUND, description: 'User not found' })
+  @ApiResponse({ status: HttpStatus.FORBIDDEN, description: 'User activated previously' })
+  @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: 'One-Time Password has expired. Please request a new OTP / One-Time Password is wrong!' })
+  @ApiParam({ name: 'id' })
+  @Put('activation/:id')
+  confirmAccountWithEmail(
+    @Param() param: FindOneParams,
+    @Body() dto: ConfirmAccountDto,
+    @Req() req: { user: MeDto },
+  ) {
+    return this.userService.confirmAccountWithEmail(param, dto, req);
   }
 }
