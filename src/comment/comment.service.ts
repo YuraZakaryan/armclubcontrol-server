@@ -195,14 +195,18 @@ export class CommentService {
           (userId: Types.ObjectId) => !userId.equals(userId),
         );
         comment.like -= field === 'usersWhoLiked' ? 1 : 0;
+        await comment.save();
+        return {
+          message: 'Like removed',
+        };
       } else {
         comment[field].push(userId);
         comment.like += field === 'usersWhoLiked' ? 1 : 0;
+        await comment.save();
+        return {
+          message: 'Like added',
+        };
       }
-      await comment.save();
-      return {
-        message: 'Like removed',
-      };
     } else {
       comment[field].push(userId);
       comment.like += field === 'usersWhoLiked' ? 1 : 0;
