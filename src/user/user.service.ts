@@ -1,5 +1,5 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
-import { Model, ObjectId, Types } from 'mongoose';
+import { Model } from 'mongoose';
 import { CreateUserDto } from './dto/create-user.dto';
 import { InjectModel } from '@nestjs/mongoose';
 import { User } from './user.schema';
@@ -9,6 +9,8 @@ import { MailerService } from '@nestjs-modules/mailer';
 import { MeDto } from 'src/auth/dto/me-dto';
 import { checkAccess } from 'src/logic';
 import { ConfirmAccountDto } from './dto/confirm-account.dto';
+import { SendOtpDto } from './dto/send-otp.dto';
+
 @Injectable()
 export class UserService {
   constructor(
@@ -28,7 +30,11 @@ export class UserService {
     });
   }
 
-  async sendOtpToMail(param: FindOneParams, req: { user: MeDto }) {
+  async sendOtpToMail(
+    dto: SendOtpDto,
+    param: FindOneParams,
+    req: { user: MeDto },
+  ) {
     const id = param.id;
     const user = await this.userModel.findById(id);
     if (!user) {
@@ -37,7 +43,10 @@ export class UserService {
     await checkAccess(id, req.user);
 
     if (user.activated) {
-      throw new HttpException('User activated previously', HttpStatus.FORBIDDEN);
+      throw new HttpException(
+        'User activated previously',
+        HttpStatus.FORBIDDEN,
+      );
     }
 
     const updater = this.otpUpdater();
@@ -48,7 +57,7 @@ export class UserService {
     const otp = user.otp;
     const brandName = 'ARMCLUB CONTROL';
     const from = 'armclubcontrol@gmail.com';
-    const to = user.email;
+    const to = dto.email;
     const subject = 'OTP կոդ, հաշիվը ակտիվացնելու համար';
     const html = `
     <div style="font-family: Helvetica, Arial, sans-serif; min-width: 1000px; overflow: auto; line-height: 2">
@@ -82,7 +91,7 @@ export class UserService {
         );
       }
       return {
-        message: `OTP ${otp} successfully sended to mail ${to} `
+        message: `OTP ${otp} successfully sended to mail ${to} `,
       };
     }
   }
@@ -101,7 +110,10 @@ export class UserService {
     await checkAccess(id, req.user);
 
     if (user.activated) {
-      throw new HttpException('User activated previously', HttpStatus.FORBIDDEN);
+      throw new HttpException(
+        'User activated previously',
+        HttpStatus.FORBIDDEN,
+      );
     }
 
     const expiresOtpIn = user.expiresOtpIn;
@@ -119,12 +131,17 @@ export class UserService {
         HttpStatus.UNAUTHORIZED,
       );
     }
+
     user.activated = true;
 
-    await user.save();
+    const success = await user.save();
 
-    return {
-      message: `Account ${user.email} successfully activated!`
+    if (success) {
+      user.email = dto.email;
+      await user.save();
+      return {
+        message: `Account ${dto.email} successfully activated!`,
+      };
     }
   }
 
@@ -143,18 +160,22 @@ export class UserService {
   async generateRefreshToken(payload: any) {
     return this.jwtService.sign(payload);
   }
+
   async findUserByUsername(username: string) {
     return this.userModel.findOne({ username }).populate('clubs');
   }
+
   async findUserByEmail(email: string) {
     return this.userModel.findOne({ email }).populate('clubs');
   }
+
   async findUserByUsernameOrEmail(login: string) {
     return (
       (await this.findUserByUsername(login)) ||
       (await this.findUserByEmail(login))
     );
   }
+
   async getAll(): Promise<Array<User>> {
     const users = await this.userModel.find();
     if (users.length === 0) {
@@ -162,6 +183,7 @@ export class UserService {
     }
     return users;
   }
+
   async getOne(params: FindOneParams) {
     const user = await this.userModel.findById(params.id);
     if (!user) {
