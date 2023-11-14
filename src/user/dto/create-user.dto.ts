@@ -6,6 +6,7 @@ import {
   IsNumber,
   IsString,
   Length,
+  Matches,
   Max,
   Min,
 } from 'class-validator';
@@ -39,7 +40,11 @@ export class CreateUserDto {
 
   @ApiProperty({ example: '123456789', description: 'password' })
   @IsString({ message: 'must be a string' })
-  @Length(8, 16, { message: 'length should be between 8 and 16 characters' })
+  @Length(8, 24, { message: 'length should be between 8 and 24 characters' })
+  @Matches(
+    /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]+$/,
+    { message: 'New password must meet complexity requirements' },
+  )
   @IsNotEmpty({ message: 'is required' })
   readonly password: string;
 

@@ -21,10 +21,10 @@ import { MailerModule } from '@nestjs-modules/mailer';
         host: 'smtp.gmail.com',
         auth: {
           user: 'armclubcontrol@gmail.com',
-          pass: 'yrteekfcsetfccme'
-        }
-      }
-    })
+          pass: 'yrteekfcsetfccme',
+        },
+      },
+    }),
   ],
 })
 export class UserModule {}

@@ -36,7 +36,7 @@ export class User {
   otp: number | null;
 
   @Prop()
-  expiresOtpIn: number | null
+  expiresOtpIn: number | null;
 
   @Prop()
   refreshToken: string;
