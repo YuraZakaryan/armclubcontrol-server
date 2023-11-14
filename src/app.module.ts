@@ -16,8 +16,40 @@ import { ScheduleModule } from '@nestjs/schedule';
 
 const NODE_ENV = `.${process.env.NODE_ENV}.env`;
 
+// const DEFAULT_ADMIN = {
+//   email: 'yura.zaqaryan6691@gmail.com',
+//   password: 'MESSImessi1?',
+// };
+//
+// const authenticate = async (email: string, password: string) => {
+//   if (email === DEFAULT_ADMIN.email && password === DEFAULT_ADMIN.password) {
+//     return Promise.resolve(DEFAULT_ADMIN);
+//   }
+//   return null;
+// };
+
 @Module({
   imports: [
+    // import('@adminjs/nestjs').then(({ AdminModule }) =>
+    //   AdminModule.createAdminAsync({
+    //     useFactory: () => ({
+    //       adminJsOptions: {
+    //         rootPath: '/admin',
+    //         resources: [],
+    //       },
+    //       auth: {
+    //         authenticate,
+    //         cookieName: 'adminjs',
+    //         cookiePassword: 'secret',
+    //       },
+    //       sessionOptions: {
+    //         resave: true,
+    //         saveUninitialized: true,
+    //         secret: 'secret',
+    //       },
+    //     }),
+    //   }),
+    // ),
     ConfigModule.forRoot({
       envFilePath: NODE_ENV,
     }),

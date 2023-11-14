@@ -1,4 +1,10 @@
-import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
+import * as bcrypt from 'bcryptjs';
+import {
+  BadRequestException,
+  HttpException,
+  HttpStatus,
+  Injectable,
+} from '@nestjs/common';
 import { Model } from 'mongoose';
 import { CreateUserDto } from './dto/create-user.dto';
 import { InjectModel } from '@nestjs/mongoose';
@@ -10,6 +16,8 @@ import { MeDto } from 'src/auth/dto/me-dto';
 import { checkAccess } from 'src/logic';
 import { ConfirmAccountDto } from './dto/confirm-account.dto';
 import { SendOtpDto } from './dto/send-otp.dto';
+import { UpdateUserDto } from './dto/update-user.dto';
+import { UpdatePasswordUserDto } from './dto/update-password-user.dto';
 
 @Injectable()
 export class UserService {
@@ -190,5 +198,73 @@ export class UserService {
       throw new HttpException('User not found', HttpStatus.NOT_FOUND);
     }
     return user;
+  }
+
+  async update(
+    params: FindOneParams,
+    dto: UpdateUserDto,
+    req: { user: MeDto },
+  ) {
+    const id = params.id;
+    await checkAccess(id, req.user);
+
+    const currentUser = await this.userModel.findById(id);
+
+    if (!currentUser) {
+      throw new HttpException('User not found', HttpStatus.NOT_FOUND);
+    }
+
+    if (!currentUser.activated && dto.email) {
+      return this.userModel.findByIdAndUpdate(
+        id,
+        {
+          name: dto.name,
+          lastname: dto.lastname,
+          username: dto.username,
+          age: dto.age,
+          email: dto.email,
+        },
+        { new: true },
+      );
+    } else {
+      return this.userModel.findByIdAndUpdate(
+        id,
+        {
+          name: dto.name,
+          lastname: dto.lastname,
+          username: dto.username,
+          age: dto.age,
+        },
+        { new: true },
+      );
+    }
+  }
+  async updatePassword(
+    params: FindOneParams,
+    dto: UpdatePasswordUserDto,
+    req: { user: MeDto },
+  ) {
+    const id = params.id;
+    const user = await this.userModel.findById(id);
+    if (!user) {
+      throw new HttpException('User not found', HttpStatus.NOT_FOUND);
+    }
+    await checkAccess(id, req.user);
+    if (dto.newPassword === dto.oldPassword) {
+      throw new HttpException(
+        'Old and new passwords must be different',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+    if (!(await bcrypt.compare(dto.oldPassword, user.password))) {
+      throw new HttpException('Old password is wrong', HttpStatus.BAD_REQUEST);
+    }
+    user.password = await bcrypt.hash(dto.newPassword, 10);
+    const updatedUser = await user.save();
+    if (updatedUser) {
+      return {
+        message: 'User password is changed successfully !',
+      };
+    }
   }
 }
