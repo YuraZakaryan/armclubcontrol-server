@@ -104,7 +104,7 @@ export class AuthService {
   async me(req: { user: MeDto }): Promise<User> {
     const token: MeDto = req.user;
     if (token) {
-      const user = await this.userService.findUserByUsername(token.username);
+      const user = await this.userService.findUserById(token.sub);
       if (!user) {
         throw new HttpException('User not found', HttpStatus.NOT_FOUND);
       }
