@@ -1,6 +1,18 @@
 import { Types } from 'mongoose';
 import { ApiProperty } from '@nestjs/swagger';
-import { IsMongoId, IsNotEmpty, IsString, Length } from 'class-validator';
+import {
+  IsMongoId,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  Length,
+  Validate,
+} from 'class-validator';
+import {
+  IsLatitude,
+  IsLongitude,
+  LatitudeLongitudePairValidator,
+} from '../../validation/club';
 
 export class CreateClubDto {
   @ApiProperty({ example: 'R-Studio Network', description: 'title' })
@@ -44,7 +56,6 @@ export class CreateClubDto {
   readonly closingTime: string;
 
   @IsString({ message: 'info - must be a string' })
-  @IsNotEmpty({ message: 'info - is required' })
   readonly info: string;
 
   @ApiProperty({
@@ -67,4 +78,28 @@ export class CreateClubDto {
     description: 'Phone',
   })
   readonly phone: string;
+
+  @ApiProperty({
+    description: 'Latitude of the map',
+    example: '39.951128',
+    type: String,
+  })
+  @IsOptional()
+  @IsLatitude()
+  @IsString({ message: 'latitudeMap - must be a string' })
+  @Validate(LatitudeLongitudePairValidator, {
+    message:
+      'If latitudeMap or longitudeMap is provided, must be provided as well, and vice versa.',
+  })
+  readonly latitudeMap: string;
+
+  @ApiProperty({
+    description: 'Longitude of the map',
+    example: '44.545757',
+    type: String,
+  })
+  @IsOptional()
+  @IsLongitude()
+  @IsString({ message: 'longitudeMap - must be a string' })
+  readonly longitudeMap: string;
 }

@@ -5,7 +5,7 @@ import {
   HttpStatus,
   Injectable,
 } from '@nestjs/common';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { CreateUserDto } from './dto/create-user.dto';
 import { InjectModel } from '@nestjs/mongoose';
 import { User } from './user.schema';
@@ -169,15 +169,19 @@ export class UserService {
     return this.jwtService.sign(payload);
   }
 
-  async findUserByUsername(username: string) {
+  async findUserByUsername(username: string): Promise<User> {
     return this.userModel.findOne({ username }).populate('clubs');
   }
 
-  async findUserByEmail(email: string) {
+  async findUserById(id: Types.ObjectId): Promise<User> {
+    return this.userModel.findById(id).populate('clubs');
+  }
+
+  async findUserByEmail(email: string): Promise<User> {
     return this.userModel.findOne({ email }).populate('clubs');
   }
 
-  async findUserByUsernameOrEmail(login: string) {
+  async findUserByUsernameOrEmail(login: string): Promise<User> {
     return (
       (await this.findUserByUsername(login)) ||
       (await this.findUserByEmail(login))

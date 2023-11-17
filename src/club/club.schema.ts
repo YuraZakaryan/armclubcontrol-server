@@ -43,6 +43,12 @@ export class Club {
   prices: Array<Types.ObjectId>;
 
   @Prop()
+  latitudeMap: string;
+
+  @Prop()
+  longitudeMap: string;
+
+  @Prop()
   openingTime: string;
 
   @Prop()

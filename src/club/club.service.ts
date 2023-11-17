@@ -54,8 +54,7 @@ export class ClubService {
     picture: Express.Multer.File,
     req: { user: MeDto },
   ): Promise<Club> {
-    console.log(params.id);
-    const id = params.id;
+    const id: Types.ObjectId = params.id;
     const currentDate: Date = new Date();
     const isoString: string = currentDate.toISOString();
     const currentClub: Club = await this.clubModel.findById(id);
@@ -72,8 +71,15 @@ export class ClubService {
       title: dto.title,
       description: dto.description,
       info: dto.info,
-      author: dto.author,
+      phone: dto.phone,
+      city: dto.city,
+      address: dto.address,
+      latitudeMap: dto.latitudeMap,
+      longitudeMap: dto.longitudeMap,
+      closingTime: dto.closingTime,
+      openingTime: dto.openingTime,
       updatedAt: isoString,
+      author: dto.author,
     };
     const imagePath = path.resolve(
       __dirname,
@@ -81,21 +87,25 @@ export class ClubService {
       'static',
       currentClub.picture,
     );
+    if (picture) {
+      try {
+        const existPicture: string = fs.readFileSync(imagePath).toString('hex');
+        const newPicture: string = picture.buffer.toString('hex');
 
-    try {
-      const existPicture: string = fs.readFileSync(imagePath).toString('hex');
-      const newPicture: string = picture.buffer.toString('hex');
-
-      if (existPicture !== newPicture) {
-        const picturePath: string = this.fileService.createFile(
+        if (existPicture !== newPicture) {
+          const picturePath: string = this.fileService.createFile(
+            FileType.IMAGE,
+            picture,
+          );
+          this.fileService.removeFile(currentClub.picture);
+          updateData.picture = picturePath;
+        }
+      } catch (error) {
+        updateData.picture = this.fileService.createFile(
           FileType.IMAGE,
           picture,
         );
-        this.fileService.removeFile(currentClub.picture);
-        updateData.picture = picturePath;
       }
-    } catch (error) {
-      updateData.picture = this.fileService.createFile(FileType.IMAGE, picture);
     }
     return this.clubModel.findByIdAndUpdate(id, updateData, {
       new: true,

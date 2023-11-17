@@ -42,6 +42,7 @@ export class ClubController {
   constructor(private clubService: ClubService) {}
 
   @UseGuards(JwtAuthGuard)
+  @UsePipes(ValidationPipe)
   @ApiOperation({ summary: 'Create club' })
   @ApiResponse({
     status: HttpStatus.CREATED,
@@ -61,7 +62,7 @@ export class ClubController {
     @UploadedFile() picture: Express.Multer.File,
     @Body() dto: CreateClubDto,
     @Res({ passthrough: true }) res: Response,
-  ) {
+  ): Promise<Club> {
     return this.clubService.create(dto, picture, res);
   }
 
@@ -90,8 +91,7 @@ export class ClubController {
     @Body() dto: CreateClubDto,
     @Req() req: { user: MeDto },
   ) {
-    console.log(params);
-    // return this.clubService.update(params, dto, picture, req);
+    return this.clubService.update(params, dto, picture, req);
   }
 
   @ApiOperation({ summary: 'Search club by title' })
