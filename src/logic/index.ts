@@ -5,13 +5,12 @@ import { HttpException, HttpStatus } from '@nestjs/common';
 export const checkAccess = async function (
   authorId: Types.ObjectId,
   user: MeDto,
-): Promise<string> {
+): Promise<void> {
   if (
-    authorId !== user.sub &&
+    authorId != user.sub &&
     user.role !== 'ADMIN' &&
     user.role !== 'MODERATOR'
   ) {
     throw new HttpException('Access denied', HttpStatus.FORBIDDEN);
   }
-  return 'Access!';
 };

@@ -59,6 +59,13 @@ export class CreateClubDto {
   readonly info: string;
 
   @ApiProperty({
+    example: 'Ararat',
+    description: 'Region',
+  })
+  @IsString({ message: 'region - must be a string' })
+  readonly region: string;
+
+  @ApiProperty({
     example: 'Artashat',
     description: 'City',
   })

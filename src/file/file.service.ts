@@ -2,26 +2,36 @@ import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import * as path from 'path';
 import * as fs from 'fs';
 import * as uuid from 'uuid';
+import sharp from 'sharp';
+
 export enum FileType {
   IMAGE = 'image',
 }
 
 @Injectable()
 export class FileService {
-  createFile(type: FileType, file: Express.Multer.File): string {
+  async createFile(type: FileType, file: Express.Multer.File): Promise<string> {
     try {
-      const fileExtension = file.originalname.split('.').pop();
+      const fileExtension = 'webp';
       const fileName = uuid.v4() + '.' + fileExtension;
       const filePath = path.resolve(__dirname, '..', '..', 'static', type);
+
       if (!fs.existsSync(filePath)) {
         fs.mkdirSync(filePath, { recursive: true });
       }
-      fs.writeFileSync(path.resolve(filePath, fileName), file.buffer);
+
+      const imagePath = path.resolve(filePath, fileName);
+
+      await sharp(file.buffer)
+        .webp({ quality: 80 })
+        .toFile(imagePath.replace(/\.[^.]+$/, '.webp'));
+
       return type + '/' + fileName;
     } catch (e) {
       throw new HttpException(e.message, HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
+
   removeFile(filename: string) {
     try {
       const filePath = path.resolve(__dirname, '..', '..', 'static', filename);
