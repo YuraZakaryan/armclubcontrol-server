@@ -17,13 +17,6 @@ export class UpdateTimerDto {
   readonly isInfinite?: boolean;
 
   @ApiProperty({
-    example: '12:00:00',
-    description: 'Start',
-  })
-  @IsString()
-  readonly start: string;
-
-  @ApiProperty({
     example: 600,
     description: 'Price',
   })

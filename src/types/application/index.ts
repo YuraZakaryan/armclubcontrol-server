@@ -4,6 +4,7 @@ export interface IUpdateData {
   title: string;
   description: string;
   info: string;
+  region: string;
   city: string;
   address: string;
   phone: string;

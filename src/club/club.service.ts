@@ -72,6 +72,7 @@ export class ClubService {
       description: dto.description,
       info: dto.info,
       phone: dto.phone,
+      region: dto.region,
       city: dto.city,
       address: dto.address,
       latitudeMap: dto.latitudeMap,
@@ -81,27 +82,17 @@ export class ClubService {
       updatedAt: isoString,
       author: dto.author,
     };
-    const imagePath = path.resolve(
-      __dirname,
-      '..',
-      'static',
-      currentClub.picture,
-    );
     if (picture) {
       try {
-        const existPicture: string = fs.readFileSync(imagePath).toString('hex');
-        const newPicture: string = picture.buffer.toString('hex');
-
-        if (existPicture !== newPicture) {
-          const picturePath: string = this.fileService.createFile(
-            FileType.IMAGE,
-            picture,
-          );
-          this.fileService.removeFile(currentClub.picture);
-          updateData.picture = picturePath;
-        }
+        this.fileService.removeFile(currentClub.picture);
+        const picturePath: string = await this.fileService.createFile(
+          FileType.IMAGE,
+          picture,
+        );
+        this.fileService.removeFile(currentClub.picture);
+        updateData.picture = picturePath;
       } catch (error) {
-        updateData.picture = this.fileService.createFile(
+        updateData.picture = await this.fileService.createFile(
           FileType.IMAGE,
           picture,
         );
@@ -143,11 +134,31 @@ export class ClubService {
                 path: 'author',
                 model: 'User',
               },
+              {
+                path: 'club',
+                model: 'Club',
+                populate: [
+                  {
+                    path: 'author',
+                    model: 'User',
+                  },
+                ],
+              },
             ],
           },
           {
             path: 'author',
             model: 'User',
+          },
+          {
+            path: 'club',
+            model: 'Club',
+            populate: [
+              {
+                path: 'author',
+                model: 'User',
+              },
+            ],
           },
         ],
       })

@@ -9,6 +9,8 @@ import {
   Req,
   Res,
   UseGuards,
+  UsePipes,
+  ValidationPipe,
 } from '@nestjs/common';
 import { CreateTimerDto } from './dto/create-timer.dto';
 import { Timer } from './timer.schema';
@@ -20,12 +22,13 @@ import { UpdateTimerDto } from './dto/update-timer.dto';
 import { TMessage } from '../types';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { MeDto } from '../auth/dto/me-dto';
+import { StartTimerDto } from './dto/start-timer.dto';
 
 @ApiTags('Timer')
 @Controller('/club/timer')
 export class TimerController {
   constructor(private timerService: TimerService) {}
-  // @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Create timer' })
   @ApiResponse({
     status: HttpStatus.CREATED,
@@ -42,6 +45,7 @@ export class TimerController {
     return this.timerService.create(dto, res);
   }
   @UseGuards(JwtAuthGuard)
+  // @UsePipes(ValidationPipe)
   @ApiOperation({ summary: 'Update timer by id' })
   @ApiResponse({ status: HttpStatus.OK, description: 'Found' })
   @ApiResponse({
@@ -60,10 +64,11 @@ export class TimerController {
     @Body() dto: UpdateTimerDto,
     @Res({ passthrough: true }) res: Response,
     @Req() req: { user: MeDto },
-  ): Promise<Timer> {
+  ) {
     return this.timerService.update(id, dto, res, req);
   }
   @UseGuards(JwtAuthGuard)
+  @UsePipes(ValidationPipe)
   @ApiOperation({ summary: 'Pause timer by id' })
   @ApiResponse({
     status: HttpStatus.OK,
@@ -79,12 +84,14 @@ export class TimerController {
   @Put('start/:id')
   start(
     @Param('id') id: Types.ObjectId,
+    @Body() dto: StartTimerDto,
     @Res({ passthrough: true }) res: Response,
     @Req() req: { user: MeDto },
   ) {
-    return this.timerService.start(id, req);
+    return this.timerService.start(id, dto, req);
   }
   @UseGuards(JwtAuthGuard)
+  @UsePipes(ValidationPipe)
   @ApiOperation({ summary: 'Pause timer by id' })
   @ApiResponse({
     status: HttpStatus.OK,
@@ -100,10 +107,11 @@ export class TimerController {
   @Put('pause/:id')
   pause(
     @Param('id') id: Types.ObjectId,
+    @Body() dto: StartTimerDto,
     @Res({ passthrough: true }) res: Response,
     @Req() req: { user: MeDto },
   ): Promise<TMessage> {
-    return this.timerService.pause(id, req);
+    return this.timerService.pause(id, dto, req);
   }
   @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Stop timer by id' })

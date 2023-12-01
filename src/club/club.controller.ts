@@ -66,8 +66,7 @@ export class ClubController {
     return this.clubService.create(dto, picture, res);
   }
 
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.MODERATOR, UserRole.ADMIN)
+  @UseGuards(JwtAuthGuard)
   @UsePipes(ValidationPipe)
   @ApiOperation({ summary: 'Update club' })
   @ApiResponse({
@@ -98,7 +97,7 @@ export class ClubController {
   @ApiResponse({ status: HttpStatus.OK, description: 'Found' })
   @ApiResponse({ status: HttpStatus.NOT_FOUND, description: 'Club not found' })
   @Get('search')
-  search(@Query('title') title: string) {
+  search(@Query('title') title: string): Promise<Array<Club>> {
     return this.clubService.search(title);
   }
 
@@ -149,7 +148,7 @@ export class ClubController {
   @ApiResponse({ status: HttpStatus.NOT_FOUND, description: 'Club not found' })
   @ApiParam({ name: 'id' })
   @Put('view/:id')
-  view(@Param('id') id: ObjectId) {
+  view(@Param('id') id: ObjectId): Promise<void> {
     return this.clubService.view(id);
   }
 }

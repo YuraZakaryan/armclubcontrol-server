@@ -16,6 +16,9 @@ export class Club {
   info: string;
 
   @Prop()
+  region: string;
+
+  @Prop()
   city: string;
 
   @Prop()

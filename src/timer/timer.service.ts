@@ -11,6 +11,7 @@ import { Server } from 'socket.io';
 import { TMessage } from '../types';
 import { checkAccess } from '../logic';
 import { MeDto } from '../auth/dto/me-dto';
+import { StartTimerDto } from './dto/start-timer.dto';
 
 @Injectable()
 export class TimerService {
@@ -67,10 +68,10 @@ export class TimerService {
     req: { user: MeDto },
   ): Promise<Timer> {
     const timer = await this.timerModel.findById(id);
-    console.log(dto);
-    // if (timer) {
-    //   await checkAccess(timer.author, req.user);
-    // }
+
+    if (timer) {
+      await checkAccess(timer.author, req.user);
+    }
 
     if (!timer) {
       res.status(HttpStatus.NOT_FOUND);
@@ -79,21 +80,16 @@ export class TimerService {
 
     if (dto.isInfinite) {
       timer.isInfinite = true;
-      timer.start = dto.start;
       timer.price = dto.price;
 
       timer.remainingTime = '00:00';
       timer.pricePerHour = 0;
-      timer.end = null;
       timer.isActive = false;
       timer.paused = false;
     } else {
       timer.remainingTime = dto.remainingTime;
       timer.defineTime = dto.remainingTime;
-      timer.start = dto.start;
       timer.price = dto.price;
-      timer.end = this.calculateEndTime(dto.start, dto.remainingTime + ':00');
-
       timer.pricePerHour = 0;
       timer.isInfinite = false;
       timer.isActive = false;
@@ -108,9 +104,9 @@ export class TimerService {
   async stop(id: Types.ObjectId, req?: { user: MeDto }) {
     const timer = await this.timerModel.findById(id);
 
-    // if (timer) {
-    //   await checkAccess(timer.author, req.user);
-    // }
+    if (timer) {
+      await checkAccess(timer.author, req.user);
+    }
 
     if (!timer) {
       throw new HttpException('Timer not found', HttpStatus.NOT_FOUND);
@@ -130,12 +126,11 @@ export class TimerService {
     }, 1000);
   }
 
-  async start(id: Types.ObjectId, req?: { user: MeDto }) {
+  async start(id: Types.ObjectId, dto: StartTimerDto, req?: { user: MeDto }) {
     const timer = await this.timerModel.findById(id);
-
-    // if (timer) {
-    //   await checkAccess(timer.author, req.user);
-    // }
+    if (timer) {
+      await checkAccess(timer.author, req.user);
+    }
 
     if (timer.isActive) {
       throw new HttpException('Timer is already active', HttpStatus.FORBIDDEN);
@@ -145,6 +140,10 @@ export class TimerService {
       throw new HttpException('Timer not found', HttpStatus.NOT_FOUND);
     }
     timer.isActive = true;
+    timer.start = dto.start;
+    if (!timer.isInfinite) {
+      timer.end = this.calculateEndTime(dto.start, timer.remainingTime + ':00');
+    }
     await timer.save();
   }
 
@@ -167,12 +166,16 @@ export class TimerService {
     return timer;
   }
 
-  async pause(id: Types.ObjectId, req: { user: MeDto }): Promise<TMessage> {
+  async pause(
+    id: Types.ObjectId,
+    dto: StartTimerDto,
+    req: { user: MeDto },
+  ): Promise<TMessage> {
     const timer = await this.timerModel.findById(id);
 
-    // if (timer) {
-    //   await checkAccess(timer.author, req.user);
-    // }
+    if (timer) {
+      await checkAccess(timer.author, req.user);
+    }
 
     if (!timer) {
       throw new HttpException('Timer not found', HttpStatus.NOT_FOUND);
@@ -183,6 +186,18 @@ export class TimerService {
     }
 
     timer.paused = !timer.paused;
+    await timer.save();
+
+    if (!timer.isInfinite) {
+      if (timer.paused) {
+        timer.end = null;
+      } else {
+        timer.end = this.calculateEndTime(
+          dto.start,
+          timer.remainingTime + ':00',
+        );
+      }
+    }
     await timer.save();
 
     return {
@@ -279,15 +294,6 @@ export class TimerService {
     }
   }
 
-  // calculateEndTime(startTime: string, remainingTime: number): Date {
-  //   const [hours, minutes, seconds] = startTime.split(':').map(Number);
-  //   const startDate = new Date();
-  //   startDate.setHours(hours);
-  //   startDate.setMinutes(minutes);
-  //   startDate.setSeconds(seconds);
-  //
-  //   return new Date(startDate.getTime() + remainingTime * 60000);
-  // }
   calculateEndTime(startTime: string, remainingTime: string) {
     const [startHours, startMinutes, startSeconds] = startTime
       .split(':')
