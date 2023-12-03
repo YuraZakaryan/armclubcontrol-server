@@ -13,6 +13,7 @@ import { RatingModule } from './rating/rating.module';
 import { TimerModule } from './timer/timer.module';
 import { TimerPriceModule } from './timer-price/timer-price.module';
 import { ScheduleModule } from '@nestjs/schedule';
+import { TimerHistoryModule } from './timer-history/timer-history.module';
 
 const NODE_ENV = `.${process.env.NODE_ENV}.env`;
 
@@ -66,6 +67,7 @@ const NODE_ENV = `.${process.env.NODE_ENV}.env`;
     SubscriptionModule,
     TimerModule,
     TimerPriceModule,
+    TimerHistoryModule,
   ],
 })
 export class AppModule {}

@@ -42,6 +42,11 @@ export class Club {
   @Prop({ type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Rating' }] })
   ratings: Array<Types.ObjectId>;
 
+  @Prop({
+    type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'TimerHistory' }],
+  })
+  timerHistories: Array<Types.ObjectId>;
+
   @Prop({ type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Rating' }] })
   prices: Array<Types.ObjectId>;
 

@@ -12,6 +12,7 @@ import { TMessage } from '../types';
 import { checkAccess } from '../logic';
 import { MeDto } from '../auth/dto/me-dto';
 import { StartTimerDto } from './dto/start-timer.dto';
+import { TimerHistoryService } from '../timer-history/timer-history.service';
 
 @Injectable()
 export class TimerService {
@@ -19,6 +20,7 @@ export class TimerService {
     @InjectModel(Timer.name) private timerModel: Model<Timer>,
     @InjectModel(Club.name) private clubModel: Model<Club>,
     private readonly socketServer: Server,
+    private readonly timerHistoryService: TimerHistoryService,
   ) {}
 
   async create(dto: CreateTimerDto, res: Response): Promise<Timer> {
@@ -51,6 +53,7 @@ export class TimerService {
       price: null,
       pricePerHour: 0,
       expired: false,
+      manuallyStopped: false,
       isActive: false,
     });
     club.timers.push(timer._id);
@@ -116,14 +119,22 @@ export class TimerService {
       throw new HttpException('Timer is not active', HttpStatus.FORBIDDEN);
     }
 
-    timer.end = this.calculateEndTime(timer.start, timer.remainingTime + ':00');
-    timer.expired = true;
+    if (!timer.expired) {
+      timer.end = this.calculateEndTime(
+        timer.start,
+        timer.remainingTime + ':00',
+      );
+      timer.expired = true;
+      timer.manuallyStopped = true;
 
-    await timer.save();
+      await timer.save();
 
-    setTimeout(async () => {
-      return await this.clear(id);
-    }, 1000);
+      this.scheduleClearTimer(timer._id);
+    }
+    if (timer.expired && timer.manuallyStopped) {
+      await this.createTimerHistoryByClub(timer);
+      await this.timerHistoryService.removeTimerHistory(timer.club);
+    }
   }
 
   async start(id: Types.ObjectId, dto: StartTimerDto, req?: { user: MeDto }) {
@@ -145,25 +156,6 @@ export class TimerService {
       timer.end = this.calculateEndTime(dto.start, timer.remainingTime + ':00');
     }
     await timer.save();
-  }
-
-  async clear(id: Types.ObjectId): Promise<Timer> {
-    const timer = await this.timerModel.findByIdAndUpdate(id, {
-      remainingTime: null,
-      isInfinite: false,
-      start: null,
-      end: null,
-      isActive: false,
-      paused: false,
-      price: null,
-      pricePerHour: 0,
-      expired: false,
-      defineTime: null,
-    });
-    if (!timer) {
-      throw new HttpException('Timer not found', HttpStatus.NOT_FOUND);
-    }
-    return timer;
   }
 
   async pause(
@@ -214,24 +206,68 @@ export class TimerService {
     });
 
     for (const timer of timers) {
-      if (timer.isInfinite) {
-        timer.remainingTime = this.addMinutesToTime(timer.remainingTime, 1);
-        timer.pricePerHour += timer.price / 60;
-      } else if (timer.remainingTime !== '00:00') {
-        timer.remainingTime = this.subtractMinutesFromTime(
-          timer.remainingTime,
-          1,
-        );
-        timer.pricePerHour += timer.price / 60;
-      } else if (timer.remainingTime === '00:00') {
-        timer.expired = true;
-        setTimeout(async () => {
-          return await this.clear(timer._id);
-        }, 1000);
+      if (timer.isActive && !timer.expired) {
+        if (timer.isInfinite) {
+          timer.remainingTime = this.addMinutesToTime(timer.remainingTime, 1);
+          timer.pricePerHour += timer.price / 60;
+        } else if (timer.remainingTime !== '00:00') {
+          timer.remainingTime = this.subtractMinutesFromTime(
+            timer.remainingTime,
+            1,
+          );
+          timer.pricePerHour += timer.price / 60;
+        } else {
+          timer.expired = true;
+          this.scheduleClearTimer(timer._id);
+        }
+        await timer.save();
+        await this.createTimerHistoryByClub(timer);
       }
-
-      await timer.save();
     }
+    await this.timerHistoryService.removeTimerHistory(timers[0]?.club);
+  }
+
+  scheduleClearTimer(timerId: Types.ObjectId): void {
+    setTimeout(async () => {
+      await this.clear(timerId);
+    }, 1000);
+  }
+
+  async createTimerHistoryByClub(timer: any) {
+    if (timer.expired) {
+      await this.timerHistoryService.createTimerHistory({
+        timerId: timer._id,
+        title: timer.title,
+        time: timer.manuallyStopped ? timer.remainingTime : timer.defineTime,
+        isInfinite: timer.isInfinite,
+        start: timer.start,
+        end: timer.end,
+        price: timer.price,
+        finalPrice: timer.pricePerHour,
+        manuallyStopped: timer.manuallyStopped,
+        club: timer.club,
+      });
+    }
+  }
+
+  async clear(id: Types.ObjectId): Promise<Timer> {
+    const timer = await this.timerModel.findByIdAndUpdate(id, {
+      remainingTime: null,
+      isInfinite: false,
+      start: null,
+      end: null,
+      isActive: false,
+      paused: false,
+      price: null,
+      pricePerHour: 0,
+      expired: false,
+      manuallyStopped: false,
+      defineTime: null,
+    });
+    if (!timer) {
+      throw new HttpException('Timer not found', HttpStatus.NOT_FOUND);
+    }
+    return timer;
   }
 
   addMinutesToTime(time: string, minutesToAdd: number) {
