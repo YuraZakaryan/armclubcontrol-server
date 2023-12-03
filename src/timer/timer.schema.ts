@@ -12,7 +12,7 @@ export class Timer {
   @Prop()
   remainingTime: string | null;
 
-  @Prop()
+  @Prop({ default: false })
   isInfinite: boolean | null;
 
   @Prop()
@@ -24,7 +24,7 @@ export class Timer {
   @Prop({ default: false })
   isActive: boolean;
 
-  @Prop()
+  @Prop({ default: false })
   paused: boolean | null;
 
   @Prop()
@@ -36,8 +36,11 @@ export class Timer {
   @Prop()
   defineTime: string;
 
-  @Prop()
+  @Prop({ default: false })
   expired: boolean;
+
+  @Prop({ default: false })
+  manuallyStopped: boolean;
 
   @Prop({ type: mongoose.Schema.Types.ObjectId, ref: 'Club' })
   club: Types.ObjectId;
