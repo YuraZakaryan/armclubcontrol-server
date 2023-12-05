@@ -11,6 +11,10 @@ import {
 import { Club, ClubSchema } from './club.schema';
 import { ClubController } from './club.controller';
 import { ClubService } from './club.service';
+import {
+  TimerHistory,
+  TimerHistorySchema,
+} from '../timer-history/timer-history.schema';
 
 @Module({
   imports: [
@@ -19,6 +23,7 @@ import { ClubService } from './club.service';
       { name: User.name, schema: UserSchema },
       { name: Comment.name, schema: CommentSchema },
       { name: SubComment.name, schema: SubCommentSchema },
+      { name: TimerHistory.name, schema: TimerHistorySchema },
     ]),
   ],
   controllers: [ClubController],
