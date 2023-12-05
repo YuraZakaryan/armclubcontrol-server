@@ -162,6 +162,10 @@ export class ClubService {
           },
         ],
       })
+      .populate({
+        path: 'timerHistories',
+        options: { sort: { createdAt: -1 } },
+      })
       .populate('ratings timers author')
       .exec();
     if (!club) {

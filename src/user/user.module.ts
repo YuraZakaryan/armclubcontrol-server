@@ -6,12 +6,19 @@ import { UserController } from './user.controller';
 import { JwtModule } from '@nestjs/jwt';
 import { EXPIRE_TIME_REFRESH, PRIVATE_KEY_REFRESH } from '../constants';
 import { MailerModule } from '@nestjs-modules/mailer';
+import {
+  TimerHistory,
+  TimerHistorySchema,
+} from '../timer-history/timer-history.schema';
 
 @Module({
   controllers: [UserController],
   providers: [UserService],
   imports: [
     MongooseModule.forFeature([{ name: User.name, schema: UserSchema }]),
+    MongooseModule.forFeature([
+      { name: TimerHistory.name, schema: TimerHistorySchema },
+    ]),
     JwtModule.register({
       secret: PRIVATE_KEY_REFRESH || 'SECRET_KEY_REFRESH',
       signOptions: { expiresIn: EXPIRE_TIME_REFRESH + 'd' },

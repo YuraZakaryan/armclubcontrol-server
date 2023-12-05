@@ -170,15 +170,39 @@ export class UserService {
   }
 
   async findUserByUsername(username: string): Promise<User> {
-    return this.userModel.findOne({ username }).populate('clubs');
+    return this.userModel.findOne({ username }).populate({
+      path: 'clubs',
+      populate: [
+        {
+          path: 'timerHistories',
+          model: 'TimerHistory',
+        },
+      ],
+    });
   }
 
   async findUserById(id: Types.ObjectId): Promise<User> {
-    return this.userModel.findById(id).populate('clubs');
+    return this.userModel.findById(id).populate({
+      path: 'clubs',
+      populate: [
+        {
+          path: 'timerHistories',
+          model: 'TimerHistory',
+        },
+      ],
+    });
   }
 
   async findUserByEmail(email: string): Promise<User> {
-    return this.userModel.findOne({ email }).populate('clubs');
+    return this.userModel.findOne({ email }).populate({
+      path: 'clubs',
+      populate: [
+        {
+          path: 'timerHistories',
+          model: 'TimerHistory',
+        },
+      ],
+    });
   }
 
   async findUserByUsernameOrEmail(login: string): Promise<User> {
