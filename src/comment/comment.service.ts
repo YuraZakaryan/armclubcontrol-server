@@ -128,7 +128,7 @@ export class CommentService {
     }
   }
 
-  async deleteCommentByClubId(clubId: ObjectId) {
+  async deleteCommentByClubId(clubId: Types.ObjectId) {
     const comments = await this.commentModel.find({ club: clubId }).exec();
     const commentIds = comments.map((comment) => comment._id);
     await this.commentModel.deleteMany({ _id: { $in: commentIds } });

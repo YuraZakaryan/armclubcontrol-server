@@ -177,6 +177,10 @@ export class UserService {
           path: 'timerHistories',
           model: 'TimerHistory',
         },
+        {
+          path: 'timers',
+          model: 'Timer',
+        },
       ],
     });
   }
@@ -189,6 +193,10 @@ export class UserService {
           path: 'timerHistories',
           model: 'TimerHistory',
         },
+        {
+          path: 'timers',
+          model: 'Timer',
+        },
       ],
     });
   }
@@ -200,6 +208,10 @@ export class UserService {
         {
           path: 'timerHistories',
           model: 'TimerHistory',
+        },
+        {
+          path: 'timers',
+          model: 'Timer',
         },
       ],
     });

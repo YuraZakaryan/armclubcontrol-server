@@ -1,7 +1,5 @@
-import * as path from 'path';
-import * as fs from 'fs';
 import { Model, ObjectId, Types } from 'mongoose';
-import { HttpException, HttpStatus, Injectable, Param } from '@nestjs/common';
+import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { User } from '../user/user.schema';
 import { FileService, FileType } from '../file/file.service';
@@ -12,7 +10,7 @@ import { Club } from './club.schema';
 import { FindOneParams, IUpdateData } from '../types';
 import { checkAccess } from '../logic';
 import { MeDto } from '../auth/dto/me-dto';
-import { Rating } from '../rating/rating.schema';
+import { TimerService } from '../timer/timer.service';
 
 @Injectable()
 export class ClubService {
@@ -23,6 +21,7 @@ export class ClubService {
     private userModel: Model<User>,
     private fileService: FileService,
     private commentService: CommentService,
+    private timerService: TimerService,
   ) {}
 
   async create(
@@ -30,10 +29,16 @@ export class ClubService {
     picture: Express.Multer.File,
     res: Response,
   ): Promise<Club> {
-    const picturePath = this.fileService.createFile(FileType.IMAGE, picture);
+    const picturePath = await this.fileService.createFile(
+      FileType.IMAGE,
+      picture,
+    );
     const user = await this.userModel.findById(dto.author);
     if (!user) {
       throw new HttpException('User not found', HttpStatus.NOT_FOUND);
+    }
+    if (!user.activated) {
+      throw new HttpException('Profile is not activated', HttpStatus.NOT_FOUND);
     }
     const club = await this.clubModel.create({
       ...dto,
@@ -174,7 +179,8 @@ export class ClubService {
     return club;
   }
 
-  async delete(id: ObjectId, req: { user: MeDto }): Promise<Club> {
+  async delete(params: FindOneParams, req: { user: MeDto }): Promise<Club> {
+    const id = params.id;
     const club = await this.clubModel.findByIdAndDelete(id);
 
     if (!club) {
@@ -193,6 +199,7 @@ export class ClubService {
       )
       .exec();
     await this.commentService.deleteCommentByClubId(id);
+    await this.timerService.deleteTimersByClubId(id);
     if (user) {
       return club;
     } else {
