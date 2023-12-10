@@ -19,10 +19,11 @@ import { Response } from 'express';
 import { ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { Types } from 'mongoose';
 import { UpdateTimerDto } from './dto/update-timer.dto';
-import { TMessage } from '../types';
+import { FindOneParams, TMessage } from '../types';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { MeDto } from '../auth/dto/me-dto';
 import { StartTimerDto } from './dto/start-timer.dto';
+import { UpdateTimerInfoDto } from './dto/update-timer-info.dto';
 
 @ApiTags('Timer')
 @Controller('/club/timer')
@@ -45,7 +46,6 @@ export class TimerController {
     return this.timerService.create(dto, res);
   }
   @UseGuards(JwtAuthGuard)
-  // @UsePipes(ValidationPipe)
   @ApiOperation({ summary: 'Update timer by id' })
   @ApiResponse({ status: HttpStatus.OK, description: 'Found' })
   @ApiResponse({
@@ -62,11 +62,34 @@ export class TimerController {
   update(
     @Param('id') id: Types.ObjectId,
     @Body() dto: UpdateTimerDto,
-    @Res({ passthrough: true }) res: Response,
     @Req() req: { user: MeDto },
   ) {
-    return this.timerService.update(id, dto, res, req);
+    return this.timerService.update(id, dto, req);
   }
+
+  @UseGuards(JwtAuthGuard)
+  @UsePipes(ValidationPipe)
+  @ApiOperation({ summary: 'Update timer information by id' })
+  @ApiResponse({ status: HttpStatus.OK, description: 'Found' })
+  @ApiResponse({
+    status: HttpStatus.NOT_FOUND,
+    description: 'Comment not found',
+  })
+  @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: 'Unauthorized' })
+  @ApiResponse({
+    status: HttpStatus.FORBIDDEN,
+    description: 'Access denied',
+  })
+  @ApiParam({ name: 'ID', description: 'timer' })
+  @Put('/info/:id')
+  updateInfo(
+    @Param() params: FindOneParams,
+    @Body() dto: UpdateTimerInfoDto,
+    @Req() req: { user: MeDto },
+  ): Promise<void> {
+    return this.timerService.updateInfo(params, dto, req);
+  }
+
   @UseGuards(JwtAuthGuard)
   @UsePipes(ValidationPipe)
   @ApiOperation({ summary: 'Pause timer by id' })
@@ -114,6 +137,7 @@ export class TimerController {
     return this.timerService.pause(id, dto, req);
   }
   @UseGuards(JwtAuthGuard)
+  @UsePipes(ValidationPipe)
   @ApiOperation({ summary: 'Stop timer by id' })
   @ApiResponse({ status: HttpStatus.OK, description: 'Timer stopped' })
   @ApiResponse({ status: HttpStatus.NOT_FOUND, description: 'Timer not found' })
@@ -138,10 +162,10 @@ export class TimerController {
   @ApiParam({ name: 'ID', description: 'timer' })
   @Delete(':id')
   delete(
-    @Param('id') id: Types.ObjectId,
+    @Param() params: FindOneParams,
     @Res({ passthrough: true }) res: Response,
     @Req() req: { user: MeDto },
   ) {
-    return this.timerService.delete(id, res, req);
+    return this.timerService.delete(params, res, req);
   }
 }

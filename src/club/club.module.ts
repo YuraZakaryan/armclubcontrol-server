@@ -15,19 +15,29 @@ import {
   TimerHistory,
   TimerHistorySchema,
 } from '../timer-history/timer-history.schema';
+import { TimerService } from '../timer/timer.service';
+import { Timer, TimerSchema } from '../timer/timer.schema';
+import { TimerHistoryService } from '../timer-history/timer-history.service';
 
 @Module({
   imports: [
     MongooseModule.forFeature([
       { name: Club.name, schema: ClubSchema },
       { name: User.name, schema: UserSchema },
+      { name: Timer.name, schema: TimerSchema },
       { name: Comment.name, schema: CommentSchema },
       { name: SubComment.name, schema: SubCommentSchema },
       { name: TimerHistory.name, schema: TimerHistorySchema },
     ]),
   ],
   controllers: [ClubController],
-  providers: [ClubService, FileService, CommentService],
+  providers: [
+    ClubService,
+    FileService,
+    CommentService,
+    TimerService,
+    TimerHistoryService,
+  ],
   exports: [MongooseModule],
 })
 export class ClubModule {}

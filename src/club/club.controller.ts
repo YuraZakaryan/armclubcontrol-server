@@ -18,8 +18,6 @@ import {
 } from '@nestjs/common';
 import { ObjectId } from 'mongoose';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { RolesGuard } from '../guard/role/role.guard';
-import { Roles, UserRole } from '../guard/role/roles.decorator';
 import {
   ApiBody,
   ApiConsumes,
@@ -121,8 +119,8 @@ export class ClubController {
     return this.clubService.getOne(id);
   }
 
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.MODERATOR, UserRole.ADMIN)
+  @UseGuards(JwtAuthGuard)
+  @UsePipes(ValidationPipe)
   @ApiOperation({ summary: 'Delete club by id' })
   @ApiResponse({
     status: HttpStatus.OK,
@@ -137,10 +135,10 @@ export class ClubController {
   @ApiParam({ name: 'id' })
   @Delete(':id')
   delete(
-    @Param('id') id: ObjectId,
+    @Param() params: FindOneParams,
     @Req() req: { user: MeDto },
   ): Promise<Club> {
-    return this.clubService.delete(id, req);
+    return this.clubService.delete(params, req);
   }
 
   @ApiOperation({ summary: 'view club by id' })

@@ -7,20 +7,19 @@ import { Club } from '../club/club.schema';
 import { Response } from 'express';
 import { UpdateTimerDto } from './dto/update-timer.dto';
 import { Cron, CronExpression } from '@nestjs/schedule';
-import { Server } from 'socket.io';
-import { TMessage } from '../types';
+import { FindOneParams, TMessage } from '../types';
 import { checkAccess } from '../logic';
 import { MeDto } from '../auth/dto/me-dto';
 import { StartTimerDto } from './dto/start-timer.dto';
 import { TimerHistoryService } from '../timer-history/timer-history.service';
+import { UpdateTimerInfoDto } from './dto/update-timer-info.dto';
 
 @Injectable()
 export class TimerService {
   constructor(
     @InjectModel(Timer.name) private timerModel: Model<Timer>,
     @InjectModel(Club.name) private clubModel: Model<Club>,
-    private readonly socketServer: Server,
-    private readonly timerHistoryService: TimerHistoryService,
+    private timerHistoryService: TimerHistoryService,
   ) {}
 
   async create(dto: CreateTimerDto, res: Response): Promise<Timer> {
@@ -64,10 +63,27 @@ export class TimerService {
     return timer;
   }
 
+  async updateInfo(
+    params: FindOneParams,
+    dto: UpdateTimerInfoDto,
+    req: { user: MeDto },
+  ) {
+    const id = params.id;
+
+    const timer = await this.timerModel.findById(id);
+    if (timer) {
+      await checkAccess(timer.author, req.user);
+    }
+    if (!timer) {
+      throw new HttpException('Timer not found!', HttpStatus.NOT_FOUND);
+    }
+    timer.title = dto.title;
+    await timer.save();
+  }
+
   async update(
     id: Types.ObjectId,
     dto: UpdateTimerDto,
-    res: Response,
     req: { user: MeDto },
   ): Promise<Timer> {
     const timer = await this.timerModel.findById(id);
@@ -77,7 +93,6 @@ export class TimerService {
     }
 
     if (!timer) {
-      res.status(HttpStatus.NOT_FOUND);
       throw new HttpException('Timer not found!', HttpStatus.NOT_FOUND);
     }
 
@@ -299,7 +314,8 @@ export class TimerService {
     return this.timerModel.find({ club: id });
   }
 
-  async delete(id: Types.ObjectId, res: Response, req: { user: MeDto }) {
+  async delete(params: FindOneParams, res: Response, req: { user: MeDto }) {
+    const id = params.id;
     const timer = await this.timerModel.findById(id);
 
     if (timer) {
@@ -328,6 +344,11 @@ export class TimerService {
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
+  }
+
+  async deleteTimersByClubId(clubId: Types.ObjectId) {
+    const timers = await this.timerModel.deleteMany({ club: { $in: clubId } });
+    return timers.deletedCount;
   }
 
   calculateEndTime(startTime: string, remainingTime: string) {
