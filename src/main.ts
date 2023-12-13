@@ -25,7 +25,7 @@ import { json, urlencoded } from 'express';
   // );
 
   app.setGlobalPrefix('api');
-  app.enableCors();
+  app.enableCors({ origin: 'http://localhost:3000', credentials: true });
   app.use(json({ limit: '50mb' }));
   app.use(urlencoded({ extended: true, limit: '50mb' }));
   const config = new DocumentBuilder()
