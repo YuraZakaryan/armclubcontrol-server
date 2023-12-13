@@ -10,6 +10,8 @@ import { MeDto } from '../auth/dto/me-dto';
 import { Club } from '../club/club.schema';
 import { checkAccess } from '../logic';
 import { User } from '../user/user.schema';
+import { FindOneParams } from '../types';
+
 @Injectable()
 export class CommentService {
   constructor(
@@ -42,7 +44,42 @@ export class CommentService {
     club.comments.push(comment.id);
     await club.save();
     res.status(HttpStatus.CREATED);
-    return comment;
+    return await (
+      await (
+        await comment.populate({
+          path: 'subComments',
+          populate: [
+            {
+              path: 'answerToUser',
+              model: 'User',
+            },
+            {
+              path: 'author',
+              model: 'User',
+            },
+            {
+              path: 'club',
+              model: 'Club',
+              populate: [
+                {
+                  path: 'author',
+                  model: 'User',
+                },
+              ],
+            },
+          ],
+        })
+      ).populate({
+        path: 'club',
+        model: 'Club',
+        populate: [
+          {
+            path: 'author',
+            model: 'User',
+          },
+        ],
+      })
+    ).populate('author');
   }
 
   async addSubComment(
@@ -66,7 +103,26 @@ export class CommentService {
       mainComment.subComments.push(subCommentCreate.id);
       await mainComment.save();
       res.status(HttpStatus.CREATED);
-      return subCommentCreate;
+      return subCommentCreate.populate([
+        {
+          path: 'answerToUser',
+          model: 'User',
+        },
+        {
+          path: 'author',
+          model: 'User',
+        },
+        {
+          path: 'club',
+          model: 'Club',
+          populate: [
+            {
+              path: 'author',
+              model: 'User',
+            },
+          ],
+        },
+      ]);
     }
 
     throw new HttpException('Comment not found!', HttpStatus.NOT_FOUND);
@@ -86,6 +142,51 @@ export class CommentService {
       .populate('subComments');
     if (!comment) {
       throw new HttpException('Comment not found!', HttpStatus.NOT_FOUND);
+    }
+    return comment;
+  }
+
+  async getAllByClub(params: FindOneParams): Promise<Array<Comment>> {
+    const clubId = params.id;
+    const comment = await this.commentModel
+      .find({ club: clubId })
+      .sort({ createdAt: -1 })
+      .populate({
+        path: 'subComments',
+        populate: [
+          {
+            path: 'answerToUser',
+            model: 'User',
+          },
+          {
+            path: 'author',
+            model: 'User',
+          },
+          {
+            path: 'club',
+            model: 'Club',
+            populate: [
+              {
+                path: 'author',
+                model: 'User',
+              },
+            ],
+          },
+        ],
+      })
+      .populate({
+        path: 'club',
+        model: 'Club',
+        populate: [
+          {
+            path: 'author',
+            model: 'User',
+          },
+        ],
+      })
+      .populate('author');
+    if (!comment) {
+      throw new HttpException('Comments not found!', HttpStatus.NOT_FOUND);
     }
     return comment;
   }

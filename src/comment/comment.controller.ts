@@ -10,6 +10,8 @@ import {
   Req,
   Res,
   UseGuards,
+  UsePipes,
+  ValidationPipe,
 } from '@nestjs/common';
 import { CreateCommentDto } from './dto/create-comment.dto';
 import { Comment } from './schemas/comment.schema';
@@ -22,6 +24,7 @@ import { ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { Response } from 'express';
 import { MeDto } from '../auth/dto/me-dto';
 import { InjectModel } from '@nestjs/mongoose';
+import { FindOneParams } from '../types';
 
 @ApiTags('Comment')
 @Controller('/club/comment')
@@ -146,6 +149,18 @@ export class CommentController {
   @Get(':id')
   getOne(@Param('id') id: ObjectId): Promise<Comment> {
     return this.commentService.getOne(id);
+  }
+  @ApiOperation({ summary: 'Get comments by club id' })
+  @ApiResponse({ status: HttpStatus.OK, description: 'Found' })
+  @ApiResponse({
+    status: HttpStatus.NOT_FOUND,
+    description: 'Comments not found',
+  })
+  @UsePipes(ValidationPipe)
+  @ApiParam({ name: 'id' })
+  @Get('/by-club/:id')
+  getOneByClub(@Param() params: FindOneParams): Promise<Array<Comment>> {
+    return this.commentService.getAllByClub(params);
   }
   @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Delete comment by id' })
