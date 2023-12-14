@@ -299,6 +299,7 @@ export class CommentService {
         await comment.save();
         return {
           message: 'Like removed',
+          comment,
         };
       } else {
         comment[field].push(userId);
@@ -306,6 +307,7 @@ export class CommentService {
         await comment.save();
         return {
           message: 'Like added',
+          comment,
         };
       }
     } else {
@@ -314,6 +316,7 @@ export class CommentService {
       await comment.save();
       return {
         message: 'Like added',
+        comment,
       };
     }
   }
