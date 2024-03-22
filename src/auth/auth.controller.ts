@@ -15,7 +15,6 @@ import { LoginUserDto } from './dto/login-user.dto';
 import { CreateUserDto } from '../user/dto/create-user.dto';
 import { User } from '../user/user.schema';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
-import { RefreshDto } from './dto/refresh-dto';
 import { MeDto } from './dto/me-dto';
 import { Response } from 'express';
 import { ValidationPipe } from '../pipes/validation.pipe';

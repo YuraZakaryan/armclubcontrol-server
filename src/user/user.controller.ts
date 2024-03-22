@@ -11,8 +11,6 @@ import {
   UsePipes,
   ValidationPipe,
 } from '@nestjs/common';
-import { UserService } from './user.service';
-import { User } from './user.schema';
 import {
   ApiBearerAuth,
   ApiConsumes,
@@ -22,15 +20,17 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
+import { MeDto } from 'src/auth/dto/me-dto';
+import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
 import { RolesGuard } from '../guard/role/role.guard';
 import { Roles, UserRole } from '../guard/role/roles.decorator';
 import { FindOneParams } from '../types';
-import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
-import { MeDto } from 'src/auth/dto/me-dto';
 import { ConfirmAccountDto } from './dto/confirm-account.dto';
 import { SendOtpDto } from './dto/send-otp.dto';
-import { UpdateUserDto } from './dto/update-user.dto';
 import { UpdatePasswordUserDto } from './dto/update-password-user.dto';
+import { UpdateUserDto } from './dto/update-user.dto';
+import { User } from './user.schema';
+import { UserService } from './user.service';
 
 @ApiTags('User')
 @Controller('/user')
@@ -45,13 +45,10 @@ export class UserController {
   getAll(): Promise<Array<User>> {
     return this.userService.getAll();
   }
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN)
+  @UseGuards(JwtAuthGuard)
   @UsePipes(ValidationPipe)
-  @ApiOperation({ summary: 'Update user' })
   @ApiResponse({ status: HttpStatus.OK, description: 'User updated' })
   @ApiResponse({ status: HttpStatus.NOT_FOUND, description: 'Users not found' })
-  @ApiResponse({ status: HttpStatus.FORBIDDEN, description: 'Access denied' })
   @ApiResponse({
     status: HttpStatus.UNAUTHORIZED,
     description: 'User is not auth!',
@@ -72,8 +69,7 @@ export class UserController {
   ) {
     return this.userService.update(params, dto, req);
   }
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN)
+  @UseGuards(JwtAuthGuard)
   @UsePipes(ValidationPipe)
   @ApiOperation({ summary: 'Update password of user' })
   @ApiResponse({

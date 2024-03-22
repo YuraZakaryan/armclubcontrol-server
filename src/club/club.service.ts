@@ -174,9 +174,79 @@ export class ClubService {
       .populate('ratings timers author')
       .exec();
     if (!club) {
-      throw new HttpException('Comment not found!', HttpStatus.NOT_FOUND);
+      throw new HttpException('Clubs not found!', HttpStatus.NOT_FOUND);
     }
     return club;
+  }
+
+  async getByUserId(
+    params: FindOneParams,
+    req: { user: MeDto },
+  ): Promise<Array<Club>> {
+    const userId = params.id;
+
+    const clubs = await this.clubModel
+      .find({ author: userId })
+      .populate({
+        path: 'comments',
+        options: { sort: { createdAt: -1 } },
+        populate: [
+          {
+            path: 'subComments',
+            model: 'SubComment',
+            populate: [
+              {
+                path: 'answerToUser',
+                model: 'User',
+              },
+              {
+                path: 'author',
+                model: 'User',
+              },
+              {
+                path: 'club',
+                model: 'Club',
+                populate: [
+                  {
+                    path: 'author',
+                    model: 'User',
+                  },
+                ],
+              },
+            ],
+          },
+          {
+            path: 'author',
+            model: 'User',
+          },
+          {
+            path: 'club',
+            model: 'Club',
+            populate: [
+              {
+                path: 'author',
+                model: 'User',
+              },
+            ],
+          },
+        ],
+      })
+      .populate({
+        path: 'timerHistories',
+        options: { sort: { createdAt: -1 } },
+      })
+      .populate('ratings timers author')
+      .exec();
+
+    if (!clubs || clubs.length === 0) {
+      throw new HttpException('Clubs not found!', HttpStatus.NOT_FOUND);
+    }
+
+    for (const club of clubs) {
+      await checkAccess(club.author._id, req.user);
+    }
+
+    return clubs;
   }
 
   async delete(params: FindOneParams, req: { user: MeDto }): Promise<Club> {

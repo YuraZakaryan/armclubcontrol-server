@@ -14,6 +14,7 @@ import { TimerModule } from './timer/timer.module';
 import { TimerPriceModule } from './timer-price/timer-price.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { TimerHistoryModule } from './timer-history/timer-history.module';
+import { FavouriteHistoryClubModule } from './favourite-history-club/favourite-history-club.module';
 
 const NODE_ENV = `.${process.env.NODE_ENV}.env`;
 
@@ -68,6 +69,7 @@ const NODE_ENV = `.${process.env.NODE_ENV}.env`;
     TimerModule,
     TimerPriceModule,
     TimerHistoryModule,
+    FavouriteHistoryClubModule,
   ],
 })
 export class AppModule {}

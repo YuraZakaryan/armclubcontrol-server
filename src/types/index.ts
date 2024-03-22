@@ -6,7 +6,6 @@ export * from './application';
 import { User } from '../user/user.schema';
 import { ObjectId, Types } from 'mongoose';
 
-
 export interface IGenerateRefreshToken {
   sub: Types.ObjectId;
 }
@@ -21,3 +20,11 @@ export class FindOneParams {
   @IsMongoId({ message: 'id - Invalid ID format' })
   id: Types.ObjectId;
 }
+export type TFetchBody<T> = {
+  items: T[];
+  totalItems: number;
+};
+export type TResponseMessage = {
+  status: string;
+  message: string;
+};

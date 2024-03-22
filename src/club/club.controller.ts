@@ -119,6 +119,20 @@ export class ClubController {
     return this.clubService.getOne(id);
   }
 
+  @UsePipes(ValidationPipe)
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Get clubs by user id' })
+  @ApiResponse({ status: HttpStatus.OK, description: 'Found' })
+  @ApiResponse({ status: HttpStatus.NOT_FOUND, description: 'Clubs not found' })
+  @ApiParam({ name: 'id', description: 'userId' })
+  @Get('user/:id')
+  getByUserId(
+    @Param() params: FindOneParams,
+    @Req() req: { user: MeDto },
+  ): Promise<Array<Club>> {
+    return this.clubService.getByUserId(params, req);
+  }
+
   @UseGuards(JwtAuthGuard)
   @UsePipes(ValidationPipe)
   @ApiOperation({ summary: 'Delete club by id' })
