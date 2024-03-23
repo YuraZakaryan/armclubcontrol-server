@@ -13,6 +13,7 @@ import { MeDto } from '../auth/dto/me-dto';
 import { StartTimerDto } from './dto/start-timer.dto';
 import { TimerHistoryService } from '../timer-history/timer-history.service';
 import { UpdateTimerInfoDto } from './dto/update-timer-info.dto';
+import { minutesToTime, timeToMinutes } from '../utils';
 
 @Injectable()
 export class TimerService {
@@ -97,21 +98,57 @@ export class TimerService {
     }
 
     if (dto.isInfinite) {
-      timer.isInfinite = true;
       timer.price = dto.price;
 
-      timer.remainingTime = '00:00';
-      timer.pricePerHour = 0;
-      timer.isActive = false;
-      timer.paused = false;
+      if (!timer.isInfinite) {
+        timer.isInfinite = true;
+      }
+
+      if (!timer.isActive) {
+        timer.pricePerHour = 0;
+        timer.remainingTime = '00:00';
+        timer.isActive = false;
+        timer.paused = false;
+      }
     } else {
-      timer.remainingTime = dto.remainingTime;
-      timer.defineTime = dto.remainingTime;
-      timer.price = dto.price;
-      timer.pricePerHour = 0;
-      timer.isInfinite = false;
-      timer.isActive = false;
-      timer.paused = false;
+      if (timer.isInfinite) {
+        timer.isInfinite = false;
+      }
+
+      // Check if both timer.remainingTime and dto.remainingTime exist and dto.remainingTime is greater than or equal to timer.remainingTime
+      if (timer.remainingTime && dto.remainingTime >= timer.remainingTime) {
+        // Convert timer.defineTime and dto.remainingTime to minutes
+        const defineTimeInMinutes: number = timeToMinutes(timer.defineTime);
+        const dtoRemainingTimeInMinutes: number = timeToMinutes(
+          dto.remainingTime,
+        );
+
+        // Calculate the difference between dto.remainingTime and timer.defineTime
+        const differenceInMinutes: number =
+          dtoRemainingTimeInMinutes - defineTimeInMinutes;
+
+        // Convert timer.remainingTime to minutes and calculate the new time in minutes
+        const currentTimeInMinutes: number = timeToMinutes(timer.remainingTime);
+        const newTimeInMinutes: number =
+          currentTimeInMinutes + differenceInMinutes;
+
+        // Update timer properties
+        timer.price = dto.price;
+        timer.defineTime = dto.remainingTime;
+        timer.remainingTime = minutesToTime(newTimeInMinutes);
+      }
+
+      if (!timer.remainingTime && !timer.isActive) {
+        timer.price = dto.price;
+        timer.remainingTime = dto.remainingTime;
+        timer.defineTime = dto.remainingTime;
+      }
+
+      if (!timer.isActive) {
+        timer.pricePerHour = 0;
+        timer.isActive = false;
+        timer.paused = false;
+      }
     }
 
     await timer.save();

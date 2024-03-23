@@ -63,7 +63,7 @@ export class TimerController {
     @Param('id') id: Types.ObjectId,
     @Body() dto: UpdateTimerDto,
     @Req() req: { user: MeDto },
-  ) {
+  ): Promise<Timer> {
     return this.timerService.update(id, dto, req);
   }
 
