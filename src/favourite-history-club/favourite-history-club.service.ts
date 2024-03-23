@@ -2,17 +2,20 @@ import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { FavouriteClub } from './schema/favourite.schema';
-import { FindOneParams, TFetchBody, TResponseMessage } from '../types';
+import { FindOneParams, TResponseMessage } from '../types';
 import { UserService } from '../user/user.service';
 import { Club } from '../club/club.schema';
 import { MeDto } from '../auth/dto/me-dto';
 import { HistoryClub } from './schema/history-club.schema';
+import { User } from '../user/user.schema';
 
 @Injectable()
 export class FavouriteAndLastVisitedService {
   constructor(
     @InjectModel(FavouriteClub.name)
     private favouriteClubModel: Model<FavouriteClub>,
+    @InjectModel(User.name)
+    private userModel: Model<User>,
     @InjectModel(HistoryClub.name)
     private historyClubModel: Model<HistoryClub>,
     @InjectModel(Club.name)
@@ -26,7 +29,7 @@ export class FavouriteAndLastVisitedService {
     const userId = req.user.sub;
     const { id: clubId } = dto;
 
-    const user = await this.userService.findUserById(userId);
+    const user = await this.userModel.findById(userId);
 
     if (!user) {
       throw new HttpException('User not found', HttpStatus.NOT_FOUND);
@@ -47,16 +50,28 @@ export class FavouriteAndLastVisitedService {
         user: userId,
         clubs: [clubId],
       });
+      user.favourites.push(clubId);
+      await user.save();
       return { status: 'Success', message: 'Club added to favorites' };
     } else {
       const index: number = favouriteClub.clubs.indexOf(clubId);
       if (index !== -1) {
         favouriteClub.clubs.splice(index, 1);
         await favouriteClub.save();
+
+        const favouriteIndex = user.favourites.indexOf(clubId);
+
+        if (favouriteIndex !== -1) {
+          user.favourites.splice(favouriteIndex, 1);
+          await user.save();
+        }
         return { status: 'Success', message: 'Club deleted from favorites' };
       } else {
         favouriteClub.clubs.unshift(clubId);
         await favouriteClub.save();
+
+        user.favourites.push(clubId);
+        await user.save();
         return { status: 'Success', message: 'Club added to favorites' };
       }
     }

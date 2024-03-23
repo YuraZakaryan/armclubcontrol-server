@@ -29,6 +29,11 @@ export class User {
   @Prop({ type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Club' }] })
   clubs: Array<Types.ObjectId>;
 
+  @Prop({
+    type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'FavouriteClub' }],
+  })
+  favourites: Array<Types.ObjectId>;
+
   @Prop()
   activated: boolean;
 
