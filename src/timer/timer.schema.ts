@@ -33,6 +33,9 @@ export class Timer {
   @Prop()
   pricePerHour: number;
 
+  @Prop({ default: 0 })
+  waitingCount: number;
+
   @Prop()
   defineTime: string;
 

@@ -68,7 +68,7 @@ export class TimerService {
     params: FindOneParams,
     dto: UpdateTimerInfoDto,
     req: { user: MeDto },
-  ) {
+  ): Promise<void> {
     const id = params.id;
 
     const timer = await this.timerModel.findById(id);
@@ -97,7 +97,10 @@ export class TimerService {
       throw new HttpException('Timer not found!', HttpStatus.NOT_FOUND);
     }
 
-    if (dto.isInfinite) {
+    timer.waitingCount = dto.waitingCount;
+    timer.price = dto.price;
+
+    if (dto.isInfinite && dto.price) {
       timer.price = dto.price;
 
       if (!timer.isInfinite) {
@@ -107,16 +110,25 @@ export class TimerService {
       if (!timer.isActive) {
         timer.pricePerHour = 0;
         timer.remainingTime = '00:00';
+        timer.defineTime = null;
         timer.isActive = false;
         timer.paused = false;
       }
-    } else {
+    } else if (
+      !dto.isInfinite &&
+      dto.remainingTime !== '00:00' &&
+      dto.price > 0
+    ) {
       if (timer.isInfinite) {
         timer.isInfinite = false;
       }
 
-      // Check if both timer.remainingTime and dto.remainingTime exist and dto.remainingTime is greater than or equal to timer.remainingTime
-      if (timer.remainingTime && dto.remainingTime >= timer.remainingTime) {
+      if (
+        timer.remainingTime &&
+        timer.remainingTime !== '00:00' &&
+        timer.isActive &&
+        dto.remainingTime >= timer.remainingTime
+      ) {
         // Convert timer.defineTime and dto.remainingTime to minutes
         const defineTimeInMinutes: number = timeToMinutes(timer.defineTime);
         const dtoRemainingTimeInMinutes: number = timeToMinutes(
@@ -133,18 +145,11 @@ export class TimerService {
           currentTimeInMinutes + differenceInMinutes;
 
         // Update timer properties
-        timer.price = dto.price;
         timer.defineTime = dto.remainingTime;
         timer.remainingTime = minutesToTime(newTimeInMinutes);
-      }
-
-      if (!timer.remainingTime && !timer.isActive) {
-        timer.price = dto.price;
+      } else {
         timer.remainingTime = dto.remainingTime;
         timer.defineTime = dto.remainingTime;
-      }
-
-      if (!timer.isActive) {
         timer.pricePerHour = 0;
         timer.isActive = false;
         timer.paused = false;
@@ -270,10 +275,10 @@ export class TimerService {
           timer.pricePerHour += timer.price / 60;
         } else {
           timer.expired = true;
+          await this.createTimerHistoryByClub(timer);
           this.scheduleClearTimer(timer._id);
         }
         await timer.save();
-        await this.createTimerHistoryByClub(timer);
       }
     }
     await this.timerHistoryService.removeTimerHistory(timers[0]?.club);

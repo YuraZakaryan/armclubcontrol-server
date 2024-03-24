@@ -22,4 +22,11 @@ export class UpdateTimerDto {
   })
   @IsNumber()
   readonly price: number;
+
+  @ApiProperty({
+    example: 3,
+    description: 'Waiting Users',
+  })
+  @IsNumber()
+  readonly waitingCount: number;
 }

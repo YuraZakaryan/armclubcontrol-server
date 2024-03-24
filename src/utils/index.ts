@@ -3,8 +3,8 @@ export const timeToMinutes = (time: string): number => {
   return hours * 60 + minutes;
 };
 export const minutesToTime = (minutes: number): string => {
-  const hours = Math.floor(minutes / 60) % 24; // Принимаем только 24-часовой формат времени
-  const remainingMinutes = minutes % 60;
+  const hours: number = Math.floor(minutes / 60) % 24;
+  const remainingMinutes: number = minutes % 60;
   return `${hours < 10 ? '0' : ''}${hours}:${
     remainingMinutes < 10 ? '0' : ''
   }${remainingMinutes}`;
