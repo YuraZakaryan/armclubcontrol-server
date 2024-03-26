@@ -1,19 +1,19 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
-import { CreateTimerDto } from './dto/create-timer.dto';
 import { InjectModel } from '@nestjs/mongoose';
-import { Timer } from './timer.schema';
-import { Model, Types } from 'mongoose';
-import { Club } from '../club/club.schema';
 import { Response } from 'express';
-import { UpdateTimerDto } from './dto/update-timer.dto';
-import { Cron, CronExpression } from '@nestjs/schedule';
-import { FindOneParams, TMessage } from '../types';
-import { checkAccess } from '../logic';
+import { Model, Types } from 'mongoose';
 import { MeDto } from '../auth/dto/me-dto';
-import { StartTimerDto } from './dto/start-timer.dto';
+import { Club } from '../club/club.schema';
+import { checkAccess } from '../logic';
 import { TimerHistoryService } from '../timer-history/timer-history.service';
-import { UpdateTimerInfoDto } from './dto/update-timer-info.dto';
+import { FindOneParams, TMessage } from '../types';
 import { minutesToTime, timeToMinutes } from '../utils';
+import { CreateTimerDto } from './dto/create-timer.dto';
+import { StartTimerDto } from './dto/start-timer.dto';
+import { UpdateTimerInfoDto } from './dto/update-timer-info.dto';
+import { UpdateTimerDto } from './dto/update-timer.dto';
+import { TimerGateway } from './timer.gateway';
+import { Timer } from './timer.schema';
 
 @Injectable()
 export class TimerService {
@@ -21,6 +21,7 @@ export class TimerService {
     @InjectModel(Timer.name) private timerModel: Model<Timer>,
     @InjectModel(Club.name) private clubModel: Model<Club>,
     private timerHistoryService: TimerHistoryService,
+    private timerGateway: TimerGateway,
   ) {}
 
   async create(dto: CreateTimerDto, res: Response): Promise<Timer> {
@@ -156,7 +157,11 @@ export class TimerService {
       }
     }
 
-    await timer.save();
+    const savedTimer = await timer.save();
+
+    if (savedTimer) {
+      await this.emitTimerUpdate(savedTimer.club._id);
+    }
 
     return timer;
   }
@@ -254,36 +259,35 @@ export class TimerService {
     };
   }
 
-  @Cron(CronExpression.EVERY_SECOND)
-  async updateRemainingTime(): Promise<void> {
-    const timers = await this.timerModel.find({
-      isActive: true,
-      paused: false,
-      remainingTime: { $ne: null },
-    });
+  // @Cron(CronExpression.EVERY_SECOND)
+  // async updateRemainingTime(): Promise<void> {
+  //   const timers = await this.timerModel.find({
+  //     isActive: true,
+  //     paused: false,
+  //     remainingTime: { $ne: null },
+  //   });
 
-    for (const timer of timers) {
-      if (timer.isActive && !timer.expired) {
-        if (timer.isInfinite) {
-          timer.remainingTime = this.addMinutesToTime(timer.remainingTime, 1);
-          timer.pricePerHour += timer.price / 60;
-        } else if (timer.remainingTime !== '00:00') {
-          timer.remainingTime = this.subtractMinutesFromTime(
-            timer.remainingTime,
-            1,
-          );
-          timer.pricePerHour += timer.price / 60;
-        } else {
-          timer.expired = true;
-          await this.createTimerHistoryByClub(timer);
-          this.scheduleClearTimer(timer._id);
-        }
-        await timer.save();
-      }
-    }
-    await this.timerHistoryService.removeTimerHistory(timers[0]?.club);
-  }
-
+  //   for (const timer of timers) {
+  //     if (timer.isActive && !timer.expired) {
+  //       if (timer.isInfinite) {
+  //         timer.remainingTime = this.addMinutesToTime(timer.remainingTime, 1);
+  //         timer.pricePerHour += timer.price / 60;
+  //       } else if (timer.remainingTime !== '00:00') {
+  //         timer.remainingTime = this.subtractMinutesFromTime(
+  //           timer.remainingTime,
+  //           1,
+  //         );
+  //         timer.pricePerHour += timer.price / 60;
+  //       } else {
+  //         timer.expired = true;
+  //         await this.createTimerHistoryByClub(timer);
+  //         this.scheduleClearTimer(timer._id);
+  //       }
+  //       await timer.save();
+  //     }
+  //   }
+  //   await this.timerHistoryService.removeTimerHistory(timers[0]?.club);
+  // }
   scheduleClearTimer(timerId: Types.ObjectId): void {
     setTimeout(async () => {
       await this.clear(timerId);
@@ -352,7 +356,7 @@ export class TimerService {
     )}`;
   }
 
-  async getOne(id: Types.ObjectId) {
+  async getOne(id: Types.ObjectId): Promise<Timer[]> {
     return this.timerModel.find({ club: id });
   }
 
@@ -418,5 +422,26 @@ export class TimerService {
       2,
       '0',
     )}:${String(endSeconds).padStart(2, '0')}`;
+  }
+
+  async emitTimerUpdate(clubId: Types.ObjectId): Promise<void> {
+    const timers = await this.getOne(clubId);
+
+    const clubIdStringify = clubId.toString();
+
+    const sockets = await this.timerGateway.server.fetchSockets();
+
+    for (const socket of sockets) {
+      const socketClub = socket.handshake.query.club;
+      if (
+        Array.isArray(socketClub)
+          ? socketClub[0] === clubIdStringify
+          : socketClub === clubIdStringify
+      ) {
+        this.timerGateway.server
+          .to(socket.id)
+          .emit('timer-updated', JSON.stringify(timers));
+      }
+    }
   }
 }

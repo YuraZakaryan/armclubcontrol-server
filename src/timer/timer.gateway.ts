@@ -1,8 +1,8 @@
 import { OnModuleInit } from '@nestjs/common';
 import { WebSocketGateway, WebSocketServer } from '@nestjs/websockets';
-import { Server, Socket } from 'socket.io';
-import { TimerService } from './timer.service';
 import { Types } from 'mongoose';
+import { Server, Socket } from 'socket.io';
+import { WebsocketService } from 'src/websocket/websocket.service';
 
 interface ICustomTicket extends Socket {
   timerInterval?: NodeJS.Timeout;
@@ -10,7 +10,7 @@ interface ICustomTicket extends Socket {
 
 @WebSocketGateway({ cors: true })
 export class TimerGateway implements OnModuleInit {
-  constructor(private timerService: TimerService) {}
+  constructor(private websocketService: WebsocketService) {}
 
   @WebSocketServer()
   server: Server;
@@ -27,19 +27,31 @@ export class TimerGateway implements OnModuleInit {
       });
 
       const club: string | string[] = socket.handshake.query.club;
-      this.startTimer(socket, club);
+      this.getTimers(socket, club);
     });
   }
 
-  private startTimer(socket: ICustomTicket, club: string | string[]) {
-    socket.timerInterval = setInterval(async () => {
-      try {
-        const clubId = Array.isArray(club) ? club[0] : club;
-        const data = await this.timerService.getOne(new Types.ObjectId(clubId));
-        socket.emit('timer-updated', JSON.stringify(data));
-      } catch (error) {
-        console.error('Error while fetching timer data:', error);
+  private async getTimers(socket: ICustomTicket, club: string | string[]) {
+    try {
+      const clubId = Array.isArray(club) ? club[0] : club;
+      const timers = await this.websocketService.getTimersByClubId(
+        new Types.ObjectId(clubId),
+      );
+
+      if (timers) {
+        socket.emit('timer-updated', JSON.stringify(timers));
       }
-    }, 1000);
+    } catch (error) {
+      console.error('Error while fetching timer data:', error);
+    }
+    // socket.timerInterval = setInterval(async () => {
+    //   try {
+    // const clubId = Array.isArray(club) ? club[0] : club;
+    // const data = await this.timerService.getOne(new Types.ObjectId(clubId));
+    // socket.emit('timer-updated', JSON.stringify(data));
+    //   } catch (error) {
+    //     console.error('Error while fetching timer data:', error);
+    //   }
+    // }, 1000);
   }
 }

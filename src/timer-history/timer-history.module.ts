@@ -1,9 +1,9 @@
 import { Module } from '@nestjs/common';
-import { TimerHistoryController } from './timer-history.controller';
-import { TimerHistoryService } from './timer-history.service';
 import { MongooseModule } from '@nestjs/mongoose';
 import { Club, ClubSchema } from '../club/club.schema';
+import { TimerHistoryController } from './timer-history.controller';
 import { TimerHistory, TimerHistorySchema } from './timer-history.schema';
+import { TimerHistoryService } from './timer-history.service';
 
 @Module({
   controllers: [TimerHistoryController],

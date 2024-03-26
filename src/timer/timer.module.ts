@@ -1,19 +1,24 @@
 import { Module } from '@nestjs/common';
-import { TimerController } from './timer.controller';
-import { TimerService } from './timer.service';
 import { MongooseModule } from '@nestjs/mongoose';
-import { Timer, TimerSchema } from './timer.schema';
+import { WebsocketService } from 'src/websocket/websocket.service';
 import { Club, ClubSchema } from '../club/club.schema';
-import { TimerGateway } from './timer.gateway';
-import { Server } from 'socket.io';
-import { TimerHistoryService } from '../timer-history/timer-history.service';
 import {
   TimerHistory,
   TimerHistorySchema,
 } from '../timer-history/timer-history.schema';
+import { TimerHistoryService } from '../timer-history/timer-history.service';
+import { TimerController } from './timer.controller';
+import { TimerGateway } from './timer.gateway';
+import { Timer, TimerSchema } from './timer.schema';
+import { TimerService } from './timer.service';
 
 @Module({
-  providers: [TimerService, TimerGateway, TimerHistoryService, Server],
+  providers: [
+    TimerService,
+    TimerHistoryService,
+    WebsocketService,
+    TimerGateway,
+  ],
   controllers: [TimerController],
   imports: [
     MongooseModule.forFeature([

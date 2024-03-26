@@ -1,20 +1,21 @@
-import * as process from 'process';
-import * as path from 'path';
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
-import { UserModule } from './user/user.module';
 import { MongooseModule } from '@nestjs/mongoose';
-import { ServeStaticModule } from '@nestjs/serve-static';
-import { AuthModule } from './auth/auth.module';
-import { CommentModule } from './comment/comment.module';
-import { SubscriptionModule } from './subscription/subscription.module';
-import { ClubModule } from './club/club.module';
-import { RatingModule } from './rating/rating.module';
-import { TimerModule } from './timer/timer.module';
-import { TimerPriceModule } from './timer-price/timer-price.module';
 import { ScheduleModule } from '@nestjs/schedule';
-import { TimerHistoryModule } from './timer-history/timer-history.module';
+import { ServeStaticModule } from '@nestjs/serve-static';
+import * as path from 'path';
+import * as process from 'process';
+import { AuthModule } from './auth/auth.module';
+import { ClubModule } from './club/club.module';
+import { CommentModule } from './comment/comment.module';
 import { FavouriteHistoryClubModule } from './favourite-history-club/favourite-history-club.module';
+import { RatingModule } from './rating/rating.module';
+import { SubscriptionModule } from './subscription/subscription.module';
+import { TimerHistoryModule } from './timer-history/timer-history.module';
+import { TimerPriceModule } from './timer-price/timer-price.module';
+import { TimerModule } from './timer/timer.module';
+import { UserModule } from './user/user.module';
+import { WebsocketModule } from './websocket/websocket.module';
 
 const NODE_ENV = `.${process.env.NODE_ENV}.env`;
 
@@ -70,6 +71,7 @@ const NODE_ENV = `.${process.env.NODE_ENV}.env`;
     TimerPriceModule,
     TimerHistoryModule,
     FavouriteHistoryClubModule,
+    WebsocketModule,
   ],
 })
 export class AppModule {}
