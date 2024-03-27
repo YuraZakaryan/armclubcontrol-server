@@ -7,7 +7,7 @@ import { Club } from '../club/club.schema';
 import { checkAccess } from '../logic';
 import { TimerHistoryService } from '../timer-history/timer-history.service';
 import { FindOneParams, TMessage } from '../types';
-import { minutesToTime, timeToMinutes } from '../utils';
+import { getFormattedDate, minutesToTime, timeToMinutes } from '../utils';
 import { CreateTimerDto } from './dto/create-timer.dto';
 import { StartTimerDto } from './dto/start-timer.dto';
 import { UpdateTimerInfoDto } from './dto/update-timer-info.dto';
@@ -58,7 +58,11 @@ export class TimerService {
       isActive: false,
     });
     club.timers.push(timer._id);
-    await club.save();
+    const savedClub = await club.save();
+
+    if (savedClub) {
+      await this.emitTimerUpdate(club._id);
+    }
 
     res.status(HttpStatus.CREATED);
 
@@ -166,6 +170,32 @@ export class TimerService {
     return timer;
   }
 
+  async setTimerEndTrigger() {
+    const timerEndTrigger = `
+      const pipeline = [
+        { $match: { operationType: 'update', 'updateDescription.updatedFields.end': { $exists: true } } },
+        { $lookup: { from: 'timers', localField: 'documentKey._id', foreignField: '_id', as: 'timer' } },
+        { $unwind: '$timer' },
+        { $project: { _id: '$timer._id', end: '$timer.end', clubId: '$timer.club' } }
+      ];
+
+      const changeStream = db.getCollection('timers').watch(pipeline);
+
+      changeStream.on('change', (change) => {
+        const currentTime = new Date();
+        const timerEnd = new Date(change.fullDocument.end);
+
+        if (currentTime.getTime() === timerEnd.getTime()) {
+          console.log('Таймер завершился в точности по времени сервера:', currentTime);
+        }
+
+        this.emitTimerUpdate(change.fullDocument.clubId);
+      });
+    `;
+
+    await this.timerModel.db.db.admin().command({ eval: timerEndTrigger });
+  }
+
   async stop(id: Types.ObjectId, req?: { user: MeDto }) {
     const timer = await this.timerModel.findById(id);
 
@@ -180,23 +210,26 @@ export class TimerService {
     if (!timer.isActive) {
       throw new HttpException('Timer is not active', HttpStatus.FORBIDDEN);
     }
+    await this.scheduleClearTimer(timer._id);
 
-    if (!timer.expired) {
-      timer.end = this.calculateEndTime(
-        timer.start,
-        timer.remainingTime + ':00',
-      );
-      timer.expired = true;
-      timer.manuallyStopped = true;
+    // if (!timer.expired) {
+    //   // timer.end = this.calculateEndTime(
+    //   //   timer.start,
+    //   //   timer.remainingTime + ':00',
+    //   // );
+    //   timer.expired = true;
+    //   timer.manuallyStopped = true;
 
-      await timer.save();
+    //   await timer.save();
 
-      this.scheduleClearTimer(timer._id);
-    }
-    if (timer.expired && timer.manuallyStopped) {
-      await this.createTimerHistoryByClub(timer);
-      await this.timerHistoryService.removeTimerHistory(timer.club);
-    }
+    //   await this.scheduleClearTimer(timer._id);
+
+    //   await this.emitTimerUpdate(timer.club._id);
+    // }
+    // if (timer.expired && timer.manuallyStopped) {
+    //   await this.createTimerHistoryByClub(timer);
+    //   await this.timerHistoryService.removeTimerHistory(timer.club);
+    // }
   }
 
   async start(id: Types.ObjectId, dto: StartTimerDto, req?: { user: MeDto }) {
@@ -212,12 +245,19 @@ export class TimerService {
     if (!timer) {
       throw new HttpException('Timer not found', HttpStatus.NOT_FOUND);
     }
+
+    const startTime = getFormattedDate(new Date());
+    console.log(startTime);
+
     timer.isActive = true;
-    timer.start = dto.start;
+    // timer.start = startTime;
     if (!timer.isInfinite) {
       timer.end = this.calculateEndTime(dto.start, timer.remainingTime + ':00');
     }
-    await timer.save();
+    const savedTimer = await timer.save();
+    if (savedTimer) {
+      await this.emitTimerUpdate(timer.club);
+    }
   }
 
   async pause(
@@ -252,7 +292,11 @@ export class TimerService {
         );
       }
     }
-    await timer.save();
+    const savedTimer = await timer.save();
+
+    if (savedTimer) {
+      await this.emitTimerUpdate(timer.club);
+    }
 
     return {
       message: `${timer.title} ${timer.paused ? 'paused!' : 'continue'}`,
@@ -288,10 +332,13 @@ export class TimerService {
   //   }
   //   await this.timerHistoryService.removeTimerHistory(timers[0]?.club);
   // }
-  scheduleClearTimer(timerId: Types.ObjectId): void {
-    setTimeout(async () => {
-      await this.clear(timerId);
-    }, 1000);
+  scheduleClearTimer(timerId: Types.ObjectId): Promise<void> {
+    return new Promise((resolve) => {
+      setTimeout(async () => {
+        await this.clear(timerId);
+        resolve(); // Resolve the promise after clearing the timer
+      }, 1000);
+    });
   }
 
   async createTimerHistoryByClub(timer: any) {

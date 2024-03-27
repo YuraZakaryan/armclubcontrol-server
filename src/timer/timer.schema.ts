@@ -1,5 +1,5 @@
-import * as mongoose from 'mongoose';
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
+import * as mongoose from 'mongoose';
 import { HydratedDocument, Types } from 'mongoose';
 
 export type TimerDocument = HydratedDocument<Comment>;
@@ -16,7 +16,7 @@ export class Timer {
   isInfinite: boolean | null;
 
   @Prop()
-  start: string | null;
+  start: Date | null;
 
   @Prop()
   end: string | null;

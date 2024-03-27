@@ -9,3 +9,22 @@ export const minutesToTime = (minutes: number): string => {
     remainingMinutes < 10 ? '0' : ''
   }${remainingMinutes}`;
 };
+export const getFormattedDate = (
+  originalDate: Date,
+  timeZoneString?: string,
+): string => {
+  const timeZone: string =
+    timeZoneString || Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+  const options: Intl.DateTimeFormatOptions = {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: 'numeric',
+    hour12: true,
+    timeZone,
+  };
+  console.log(new Intl.DateTimeFormat('hy-AM', options).format(originalDate));
+  return new Intl.DateTimeFormat('hy-AM', options).format(originalDate);
+};
