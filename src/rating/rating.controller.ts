@@ -7,12 +7,12 @@ import {
   Post,
   Res,
 } from '@nestjs/common';
+import { ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { Response } from 'express';
+import { ObjectId, Types } from 'mongoose';
 import { SetRatingDto } from './dto/set-rating.dto';
 import { Rating } from './rating.schema';
 import { RatingService } from './rating.service';
-import { ObjectId } from 'mongoose';
-import { ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
-import { Response } from 'express';
 @ApiTags('Rating')
 @Controller('/rating')
 export class RatingController {
@@ -50,7 +50,7 @@ export class RatingController {
   })
   @ApiParam({ name: 'id', description: 'club' })
   @Get('average/:id')
-  getAverageByAppId(@Param('id') id: ObjectId) {
+  getAverageByAppId(@Param('id') id: Types.ObjectId) {
     return this.ratingService.getAverageByClubId(id);
   }
   @ApiOperation({ summary: 'Get all ratings' })

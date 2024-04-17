@@ -1,13 +1,13 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { FavouriteClub } from './schema/favourite.schema';
-import { FindOneParams, TResponseMessage } from '../types';
-import { UserService } from '../user/user.service';
-import { Club } from '../club/club.schema';
 import { MeDto } from '../auth/dto/me-dto';
-import { HistoryClub } from './schema/history-club.schema';
+import { Club } from '../club/club.schema';
+import { FindOneParams, TResponseMessage } from '../types';
 import { User } from '../user/user.schema';
+import { UserService } from '../user/user.service';
+import { FavouriteClub } from './schema/favourite.schema';
+import { HistoryClub } from './schema/history-club.schema';
 
 @Injectable()
 export class FavouriteAndLastVisitedService {
@@ -121,16 +121,22 @@ export class FavouriteAndLastVisitedService {
       return { status: 'Success', message: 'Club added to history' };
     }
   }
-  async getFavouriteClubsByUserId(req: { user: MeDto }) {
+  async getFavouriteClubsByUserId(
+    req: {
+      user: MeDto;
+    },
+    limit: number,
+    skip: number,
+  ) {
     const userId = req.user.sub;
 
-    const user = this.userService.findUserById(userId);
+    const user = await this.userService.findUserById(userId);
 
     if (!user) {
       throw new HttpException('User not found', HttpStatus.NOT_FOUND);
     }
 
-    const favourites = await this.favouriteClubModel
+    const favorites = await this.favouriteClubModel
       .findOne({ user: userId })
       .populate({
         path: 'clubs',
@@ -152,28 +158,32 @@ export class FavouriteAndLastVisitedService {
       })
       .exec();
 
-    if (!favourites) {
+    if (!favorites) {
       throw new HttpException(
         'Favourite clubs by this user are not found',
         HttpStatus.NOT_FOUND,
       );
     }
 
-    const totalItems: number = favourites.clubs.length;
-
-    return { items: favourites.clubs, totalItems };
+    const totalItems: number = favorites.clubs.length;
+    const clubs = favorites.clubs.slice(skip, skip + limit);
+    return { items: clubs, totalItems };
   }
 
-  async getClubHistoriesByUserId(req: { user: MeDto }) {
+  async getClubHistoriesByUserId(
+    req: { user: MeDto },
+    limit: number,
+    skip: number,
+  ) {
     const userId = req.user.sub;
 
-    const user = this.userService.findUserById(userId);
+    const user = await this.userService.findUserById(userId);
 
     if (!user) {
       throw new HttpException('User not found', HttpStatus.NOT_FOUND);
     }
 
-    const favourites = await this.historyClubModel
+    const history = await this.historyClubModel
       .findOne({ user: userId })
       .populate({
         path: 'clubs',
@@ -195,14 +205,15 @@ export class FavouriteAndLastVisitedService {
       })
       .exec();
 
-    if (!favourites) {
+    if (!history) {
       throw new HttpException(
         'History clubs by this user are not found',
         HttpStatus.NOT_FOUND,
       );
     }
 
-    const totalItems: number = favourites.clubs.length;
-    return { items: favourites.clubs, totalItems };
+    const totalItems: number = history.clubs.length;
+    const clubs = history.clubs.slice(skip, skip + limit);
+    return { items: clubs, totalItems };
   }
 }

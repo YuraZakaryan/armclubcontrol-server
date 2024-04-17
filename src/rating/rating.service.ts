@@ -1,10 +1,10 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
+import { InjectModel } from '@nestjs/mongoose';
+import { Response } from 'express';
+import { Model, ObjectId, Types } from 'mongoose';
+import { Club } from '../club/club.schema';
 import { SetRatingDto } from './dto/set-rating.dto';
 import { Rating } from './rating.schema';
-import { InjectModel } from '@nestjs/mongoose';
-import { Model, ObjectId, Types } from 'mongoose';
-import { Response } from 'express';
-import { Club } from '../club/club.schema';
 
 @Injectable()
 export class RatingService {
@@ -85,16 +85,24 @@ export class RatingService {
     return rating;
   }
 
-  async getAverageByClubId(id: ObjectId) {
-    const ratings = await this.ratingModel.find({ club: id });
-    if (ratings.length === 0) {
+  async getAverageByClubId(id: Types.ObjectId) {
+    const aggregationResult = await this.ratingModel
+      .aggregate([
+        { $match: { club: id } },
+        {
+          $group: {
+            _id: null,
+            averageRating: { $avg: '$rating' },
+            count: { $sum: 1 },
+          },
+        },
+      ])
+      .exec();
+
+    if (aggregationResult.length === 0) {
       throw new HttpException('Ratings not found', HttpStatus.NOT_FOUND);
     }
-    const totalRatings = ratings.length;
-    const sumOfRatings = ratings.reduce(
-      (sum, rating) => sum + rating.rating,
-      0,
-    );
-    return sumOfRatings / totalRatings;
+
+    return aggregationResult[0].averageRating;
   }
 }

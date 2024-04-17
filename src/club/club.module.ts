@@ -1,5 +1,7 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
+import { Rating, RatingSchema } from 'src/rating/rating.schema';
+import { RatingService } from 'src/rating/rating.service';
 import { TimerGateway } from 'src/timer/timer.gateway';
 import { WebsocketService } from 'src/websocket/websocket.service';
 import { CommentService } from '../comment/comment.service';
@@ -30,6 +32,7 @@ import { ClubService } from './club.service';
       { name: Comment.name, schema: CommentSchema },
       { name: SubComment.name, schema: SubCommentSchema },
       { name: TimerHistory.name, schema: TimerHistorySchema },
+      { name: Rating.name, schema: RatingSchema },
     ]),
   ],
   controllers: [ClubController],
@@ -39,6 +42,7 @@ import { ClubService } from './club.service';
     CommentService,
     TimerService,
     TimerHistoryService,
+    RatingService,
     TimerGateway,
     WebsocketService,
   ],

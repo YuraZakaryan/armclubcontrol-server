@@ -4,16 +4,21 @@ import {
   HttpStatus,
   Param,
   Post,
+  Query,
   Req,
   UseGuards,
 } from '@nestjs/common';
-import { FavouriteAndLastVisitedService } from './favourite-history-club.service';
-import { FavouriteClub } from './schema/favourite.schema';
-import { FindOneParams, TFetchBody, TResponseMessage } from '../types';
-import { ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import {
+  ApiOperation,
+  ApiParam,
+  ApiQuery,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 import { MeDto } from '../auth/dto/me-dto';
-import { Club } from '../club/club.schema';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { FindOneParams, TResponseMessage } from '../types';
+import { FavouriteAndLastVisitedService } from './favourite-history-club.service';
 
 @ApiTags('Favourite and Last visited clubs')
 @Controller('favourite-history-club')
@@ -64,9 +69,25 @@ export class FavouriteHistoryClubController {
   @ApiResponse({ status: HttpStatus.NOT_FOUND, description: 'User not found' })
   @ApiResponse({ status: HttpStatus.NOT_FOUND, description: 'Clubs not found' })
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: 'Unauthorized' })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+  })
+  @ApiQuery({
+    name: 'skip',
+    required: false,
+  })
   @Get('favourite')
-  getFavouriteClubsByUserId(@Req() req: { user: MeDto }) {
-    return this.favouriteAndLastVisitedService.getFavouriteClubsByUserId(req);
+  getFavouriteClubsByUserId(
+    @Req() req: { user: MeDto },
+    @Query('limit') limit?: number,
+    @Query('skip') skip?: number,
+  ) {
+    return this.favouriteAndLastVisitedService.getFavouriteClubsByUserId(
+      req,
+      limit,
+      skip,
+    );
   }
 
   @UseGuards(JwtAuthGuard)
@@ -77,8 +98,24 @@ export class FavouriteHistoryClubController {
   @ApiResponse({ status: HttpStatus.NOT_FOUND, description: 'User not found' })
   @ApiResponse({ status: HttpStatus.NOT_FOUND, description: 'Clubs not found' })
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: 'Unauthorized' })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+  })
+  @ApiQuery({
+    name: 'skip',
+    required: false,
+  })
   @Get('history-club')
-  getClubHistoriesByUserId(@Req() req: { user: MeDto }) {
-    return this.favouriteAndLastVisitedService.getClubHistoriesByUserId(req);
+  getClubHistoriesByUserId(
+    @Req() req: { user: MeDto },
+    @Query('limit') limit?: number,
+    @Query('skip') skip?: number,
+  ) {
+    return this.favouriteAndLastVisitedService.getClubHistoriesByUserId(
+      req,
+      limit,
+      skip,
+    );
   }
 }

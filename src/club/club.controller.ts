@@ -16,24 +16,25 @@ import {
   UsePipes,
   ValidationPipe,
 } from '@nestjs/common';
-import { ObjectId } from 'mongoose';
 import { FileInterceptor } from '@nestjs/platform-express';
 import {
   ApiBody,
   ApiConsumes,
   ApiOperation,
   ApiParam,
+  ApiQuery,
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
-import { CreateClubWithPictureDto } from './dto/create-club-with-picture.dto';
 import { Response } from 'express';
-import { CreateClubDto } from './dto/create-club.dto';
-import { Club } from './club.schema';
-import { ClubService } from './club.service';
+import { Types } from 'mongoose';
 import { MeDto } from '../auth/dto/me-dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { FindOneParams } from '../types';
+import { Club } from './club.schema';
+import { ClubService } from './club.service';
+import { CreateClubWithPictureDto } from './dto/create-club-with-picture.dto';
+import { CreateClubDto } from './dto/create-club.dto';
 @ApiTags('Club')
 @Controller('/club')
 export class ClubController {
@@ -102,12 +103,60 @@ export class ClubController {
   @ApiOperation({ summary: 'Get all club' })
   @ApiResponse({ status: HttpStatus.OK, description: 'Found' })
   @ApiResponse({ status: HttpStatus.NOT_FOUND, description: 'Clubs not found' })
+  @ApiQuery({
+    name: 'limit',
+    type: 'number',
+    required: false,
+  })
+  @ApiQuery({
+    name: 'skip',
+    type: 'number',
+    required: false,
+  })
+  @ApiQuery({
+    name: 'region',
+    type: 'string',
+    required: false,
+  })
+  @ApiQuery({
+    name: 'city',
+    type: 'string',
+    required: false,
+  })
+  @ApiQuery({
+    name: 'title',
+    type: 'string',
+    required: false,
+  })
+  @ApiQuery({
+    name: 'random',
+    type: 'boolean',
+    required: false,
+  })
+  @ApiQuery({
+    name: 'byRating',
+    type: 'boolean',
+    required: false,
+  })
   @Get('all')
   getAll(
-    @Query('count') count: number,
-    @Query('offset') offset: number,
-  ): Promise<Array<Club>> {
-    return this.clubService.getAll(count, offset);
+    @Query('limit') limit: number,
+    @Query('skip') skip: number,
+    @Query('region') region: string,
+    @Query('city') city: string,
+    @Query('title') title: string,
+    @Query('random') random: boolean,
+    @Query('byRating') byRating: boolean,
+  ) {
+    return this.clubService.getAll(
+      limit,
+      skip,
+      region,
+      city,
+      title,
+      random,
+      byRating,
+    );
   }
 
   @ApiOperation({ summary: 'Get club by id' })
@@ -115,7 +164,7 @@ export class ClubController {
   @ApiResponse({ status: HttpStatus.NOT_FOUND, description: 'Club not found' })
   @ApiParam({ name: 'id', description: 'Club' })
   @Get(':id')
-  getOne(@Param('id') id: ObjectId): Promise<Club> {
+  getOne(@Param('id') id: Types.ObjectId): Promise<Club> {
     return this.clubService.getOne(id);
   }
 
@@ -160,7 +209,7 @@ export class ClubController {
   @ApiResponse({ status: HttpStatus.NOT_FOUND, description: 'Club not found' })
   @ApiParam({ name: 'id' })
   @Put('view/:id')
-  view(@Param('id') id: ObjectId): Promise<void> {
+  view(@Param('id') id: Types.ObjectId): Promise<void> {
     return this.clubService.view(id);
   }
 }

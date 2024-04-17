@@ -4,20 +4,19 @@ import {
   Get,
   HttpStatus,
   Post,
-  Put,
   Req,
   Res,
   UseGuards,
   UsePipes,
 } from '@nestjs/common';
-import { AuthService } from './auth.service';
-import { LoginUserDto } from './dto/login-user.dto';
-import { CreateUserDto } from '../user/dto/create-user.dto';
-import { User } from '../user/user.schema';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
-import { MeDto } from './dto/me-dto';
 import { Response } from 'express';
 import { ValidationPipe } from '../pipes/validation.pipe';
+import { CreateUserDto } from '../user/dto/create-user.dto';
+import { User } from '../user/user.schema';
+import { AuthService } from './auth.service';
+import { LoginUserDto } from './dto/login-user.dto';
+import { MeDto } from './dto/me-dto';
 import { JwtAuthGuard } from './jwt-auth.guard';
 
 @ApiTags('Auth')
@@ -54,6 +53,7 @@ export class AuthController {
     @Body() dto: CreateUserDto,
     @Res({ passthrough: true }) res: Response,
   ) {
+    console.log(dto);
     return this.authService.registration(dto, res);
   }
 

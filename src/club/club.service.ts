@@ -1,7 +1,9 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Response } from 'express';
-import { Model, ObjectId, Types } from 'mongoose';
+import { Model, Types } from 'mongoose';
+import { Rating } from 'src/rating/rating.schema';
+import { RatingService } from 'src/rating/rating.service';
 import { MeDto } from '../auth/dto/me-dto';
 import { CommentService } from '../comment/comment.service';
 import { FileService, FileType } from '../file/file.service';
@@ -19,7 +21,10 @@ export class ClubService {
     private clubModel: Model<Club>,
     @InjectModel(User.name)
     private userModel: Model<User>,
+    @InjectModel(Club.name)
+    private ratingModel: Model<Rating>,
     private fileService: FileService,
+    private ratingService: RatingService,
     private commentService: CommentService,
     private timerService: TimerService,
   ) {}
@@ -107,20 +112,102 @@ export class ClubService {
       new: true,
     });
   }
-  async getAll(count = 10, offset = 0): Promise<Array<Club>> {
-    const clubs = await this.clubModel
-      .find()
+  async getAll(
+    limit: number,
+    skip: number,
+    region: string,
+    city: string,
+    title: string,
+    random: boolean,
+    byRating: boolean,
+  ) {
+    const queryConditions: any = {};
+
+    if (region !== undefined) {
+      queryConditions.region = region;
+    }
+
+    if (city !== undefined) {
+      queryConditions.city = city;
+    }
+
+    if (title !== undefined) {
+      queryConditions.title = { $regex: new RegExp(title, 'i') };
+    }
+
+    let query: any = this.clubModel.find(queryConditions);
+
+    if (random) {
+    } else if (byRating) {
+      query = query.sort({});
+    } else {
+      query = query.sort({ _id: -1 });
+    }
+    const totalItemsQuery = this.clubModel.find(queryConditions);
+    const totalItems = await totalItemsQuery.countDocuments().exec();
+
+    const clubs = await query
+      .limit(limit)
+      .skip(skip)
       .populate('timers ratings comments')
-      .skip(offset)
-      .limit(count)
       .exec();
-    if (clubs.length === 0) {
+
+    if (!clubs || clubs.length === 0) {
       throw new HttpException('Clubs not found', HttpStatus.NOT_FOUND);
     }
-    return clubs;
+
+    if (byRating) {
+      return this.sortClubsByRatingAndHandleErrors(clubs, totalItems);
+    }
+
+    return {
+      totalItems: totalItems,
+      items: clubs,
+    };
   }
 
-  async getOne(id: ObjectId): Promise<Club> {
+  async sortClubsByRatingAndHandleErrors(clubs: any[], totalItems: number) {
+    const ratingPromises = clubs.map(async (club: any) => {
+      try {
+        const averageRating = await this.ratingService.getAverageByClubId(
+          club._id,
+        );
+        return { club, averageRating };
+      } catch (error) {
+        return { club, error };
+      }
+    });
+
+    const ratingResults = await Promise.all(ratingPromises);
+    const successfulClubs = [];
+    const errorClubs = [];
+
+    ratingResults.forEach((item) => {
+      if (item.error) {
+        errorClubs.push(item);
+      } else {
+        successfulClubs.push(item);
+      }
+    });
+
+    successfulClubs.sort((a: any, b: any) => {
+      if (a.averageRating === b.averageRating) {
+        return Math.random() - 0.5;
+      }
+      return b.averageRating - a.averageRating;
+    });
+
+    const finalClubs = successfulClubs
+      .map((item) => item.club)
+      .concat(errorClubs.map((item) => item.club));
+
+    return {
+      totalItems: totalItems,
+      items: finalClubs,
+    };
+  }
+
+  async getOne(id: Types.ObjectId): Promise<Club> {
     const club = await this.clubModel
       .findById(id)
       .populate({
@@ -280,7 +367,7 @@ export class ClubService {
     }
   }
 
-  async view(id: ObjectId): Promise<void> {
+  async view(id: Types.ObjectId): Promise<void> {
     const club = await this.clubModel.findById(id);
     if (!club) {
       throw new HttpException('Club not found', HttpStatus.NOT_FOUND);

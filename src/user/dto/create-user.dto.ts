@@ -33,7 +33,7 @@ export class CreateUserDto {
   readonly email: string;
 
   @ApiProperty({ example: 'Curry6123', description: 'username' })
-  @Length(8, 16, { message: 'length should be between 8 and 16 characters' })
+  @Length(6, 16, { message: 'length should be between 8 and 16 characters' })
   @IsString({ message: 'must be a string' })
   @IsNotEmpty({ message: 'is required' })
   readonly username: string;
