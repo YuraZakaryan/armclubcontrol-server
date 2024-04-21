@@ -13,6 +13,7 @@ export interface IUpdateData {
   author: Types.ObjectId;
   updatedAt: string;
   picture?: string;
+  posterPicture?: string;
   openingTime: string;
   closingTime: string;
 }

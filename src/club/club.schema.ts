@@ -1,5 +1,5 @@
-import * as mongoose from 'mongoose';
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
+import * as mongoose from 'mongoose';
 import { HydratedDocument, Types } from 'mongoose';
 
 export type ClubDocument = HydratedDocument<Comment>;
@@ -32,6 +32,9 @@ export class Club {
 
   @Prop()
   picture: string;
+
+  @Prop()
+  posterPicture: string;
 
   @Prop({ type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Pictures' }] })
   pictures: Array<Types.ObjectId>;

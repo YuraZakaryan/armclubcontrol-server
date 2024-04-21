@@ -10,13 +10,13 @@ import {
   Query,
   Req,
   Res,
-  UploadedFile,
+  UploadedFiles,
   UseGuards,
   UseInterceptors,
   UsePipes,
   ValidationPipe,
 } from '@nestjs/common';
-import { FileInterceptor } from '@nestjs/platform-express';
+import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import {
   ApiBody,
   ApiConsumes,
@@ -53,16 +53,32 @@ export class ClubController {
     status: HttpStatus.FORBIDDEN,
     description: 'Access denied',
   })
-  @UseInterceptors(FileInterceptor('picture'))
+  @UseInterceptors(
+    FileFieldsInterceptor([
+      { name: 'picture', maxCount: 1 },
+      { name: 'posterPicture', maxCount: 1 },
+    ]),
+  )
   @ApiConsumes('multipart/form-data')
   @ApiBody({ type: CreateClubWithPictureDto })
   @Post('create')
   create(
-    @UploadedFile() picture: Express.Multer.File,
+    @UploadedFiles()
+    pictures: {
+      picture: Express.Multer.File;
+      posterPicture?: Express.Multer.File;
+    },
     @Body() dto: CreateClubDto,
     @Res({ passthrough: true }) res: Response,
-  ): Promise<Club> {
-    return this.clubService.create(dto, picture, res);
+  ) {
+    const picture = Array.isArray(pictures.picture)
+      ? pictures.picture[0]
+      : null;
+    const posterPicture = Array.isArray(pictures.posterPicture)
+      ? pictures.posterPicture[0]
+      : null;
+
+    return this.clubService.create(dto, picture, posterPicture, res);
   }
 
   @UseGuards(JwtAuthGuard)
@@ -78,18 +94,35 @@ export class ClubController {
     status: HttpStatus.FORBIDDEN,
     description: 'Access denied',
   })
-  @UseInterceptors(FileInterceptor('picture'))
+  @UseInterceptors(
+    FileFieldsInterceptor([
+      { name: 'picture', maxCount: 1 },
+      { name: 'posterPicture', maxCount: 1 },
+    ]),
+  )
   @ApiConsumes('multipart/form-data')
   @ApiBody({ type: CreateClubWithPictureDto })
   @ApiParam({ name: 'id' })
   @Put(':id')
   update(
     @Param() params: FindOneParams,
-    @UploadedFile() picture: Express.Multer.File,
+    @UploadedFiles()
+    pictures: {
+      picture: Express.Multer.File;
+      posterPicture?: Express.Multer.File;
+    },
     @Body() dto: CreateClubDto,
     @Req() req: { user: MeDto },
   ) {
-    return this.clubService.update(params, dto, picture, req);
+    const picture = Array.isArray(pictures.picture)
+      ? pictures.picture[0]
+      : null;
+
+    const posterPicture = Array.isArray(pictures.posterPicture)
+      ? pictures.posterPicture[0]
+      : null;
+
+    return this.clubService.update(params, dto, picture, posterPicture, req);
   }
 
   @ApiOperation({ summary: 'Search club by title' })

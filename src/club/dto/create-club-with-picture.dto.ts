@@ -5,7 +5,14 @@ export class CreateClubWithPictureDto extends CreateClubDto {
   @ApiProperty({
     type: 'string',
     format: 'binary',
-    description: 'picture',
+    description: 'Picture',
   })
   picture: Express.Multer.File;
+
+  @ApiProperty({
+    type: 'string',
+    format: 'binary',
+    description: 'Poster picture',
+  })
+  posterPicture: Express.Multer.File;
 }

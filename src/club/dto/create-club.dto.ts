@@ -1,4 +1,3 @@
-import { Types } from 'mongoose';
 import { ApiProperty } from '@nestjs/swagger';
 import {
   IsMongoId,
@@ -8,6 +7,7 @@ import {
   Length,
   Validate,
 } from 'class-validator';
+import { Types } from 'mongoose';
 import {
   IsLatitude,
   IsLongitude,
@@ -37,10 +37,6 @@ export class CreateClubDto {
   @IsNotEmpty({ message: 'description - is required' })
   readonly description: string;
 
-  @ApiProperty({
-    example: 'info example about installation',
-    description: 'info',
-  })
   @ApiProperty({
     example: '08:00:00',
     description: 'Opening Time',
@@ -85,6 +81,12 @@ export class CreateClubDto {
     description: 'Phone',
   })
   readonly phone: string;
+
+  @ApiProperty({
+    example: '93-77-77-77',
+    description: 'Phone',
+  })
+  readonly removePosterPicture: boolean;
 
   @ApiProperty({
     description: 'Latitude of the map',

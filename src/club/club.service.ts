@@ -32,12 +32,22 @@ export class ClubService {
   async create(
     dto: CreateClubDto,
     picture: Express.Multer.File,
+    posterPicture: Express.Multer.File,
     res: Response,
   ): Promise<Club> {
     const picturePath = await this.fileService.createFile(
       FileType.IMAGE,
       picture,
     );
+
+    let posterPicturePath: string | null = null;
+
+    if (posterPicture) {
+      posterPicturePath = await this.fileService.createFile(
+        FileType.IMAGE,
+        posterPicture,
+      );
+    }
     const user = await this.userModel.findById(dto.author);
     if (!user) {
       throw new HttpException('User not found', HttpStatus.NOT_FOUND);
@@ -50,6 +60,7 @@ export class ClubService {
       views: 0,
       rating: 0,
       picture: picturePath,
+      posterPicture: posterPicturePath,
       status: false,
     });
     user.clubs.push(club.id);
@@ -62,6 +73,7 @@ export class ClubService {
     params: FindOneParams,
     dto: CreateClubDto,
     picture: Express.Multer.File,
+    posterPicture: Express.Multer.File,
     req: { user: MeDto },
   ): Promise<Club> {
     const id: Types.ObjectId = params.id;
@@ -106,6 +118,31 @@ export class ClubService {
           FileType.IMAGE,
           picture,
         );
+      }
+    }
+    if (posterPicture) {
+      try {
+        if (currentClub.posterPicture) {
+          this.fileService.removeFile(currentClub.posterPicture);
+        }
+        if (posterPicture.buffer) {
+          const posterPicturePath: string = await this.fileService.createFile(
+            FileType.IMAGE,
+            posterPicture,
+          );
+          updateData.posterPicture = posterPicturePath;
+        }
+      } catch (error) {
+        updateData.picture = await this.fileService.createFile(
+          FileType.IMAGE,
+          picture,
+        );
+      }
+    }
+    if (dto.removePosterPicture) {
+      if (currentClub.posterPicture) {
+        this.fileService.removeFile(currentClub.posterPicture);
+        updateData.posterPicture = null;
       }
     }
     return this.clubModel.findByIdAndUpdate(id, updateData, {
