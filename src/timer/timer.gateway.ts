@@ -32,18 +32,29 @@ export class TimerGateway implements OnModuleInit {
   }
 
   private async getTimers(socket: ICustomTicket, club: string | string[]) {
-    try {
-      const clubId = Array.isArray(club) ? club[0] : club;
-      const timers = await this.websocketService.getTimersByClubId(
-        new Types.ObjectId(clubId),
-      );
-
-      if (timers) {
+    socket.timerInterval = setInterval(async () => {
+      try {
+        const clubId = Array.isArray(club) ? club[0] : club;
+        const timers = await this.websocketService.getTimersByClubId(
+          new Types.ObjectId(clubId),
+        );
         socket.emit('timer-updated', JSON.stringify(timers));
+      } catch (error) {
+        console.error('Error while fetching timer data:', error);
       }
-    } catch (error) {
-      console.error('Error while fetching timer data:', error);
-    }
+    }, 1000);
+    // try {
+    //   const clubId = Array.isArray(club) ? club[0] : club;
+    //   const timers = await this.websocketService.getTimersByClubId(
+    //     new Types.ObjectId(clubId),
+    //   );
+
+    //   if (timers) {
+    //     socket.emit('timer-updated', JSON.stringify(timers));
+    //   }
+    // } catch (error) {
+    //   console.error('Error while fetching timer data:', error);
+    // }
     // socket.timerInterval = setInterval(async () => {
     //   try {
     // const clubId = Array.isArray(club) ? club[0] : club;

@@ -1,5 +1,6 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
+import { Cron, CronExpression } from '@nestjs/schedule';
 import { Response } from 'express';
 import { Model, Types } from 'mongoose';
 import { MeDto } from '../auth/dto/me-dto';
@@ -303,35 +304,35 @@ export class TimerService {
     };
   }
 
-  // @Cron(CronExpression.EVERY_SECOND)
-  // async updateRemainingTime(): Promise<void> {
-  //   const timers = await this.timerModel.find({
-  //     isActive: true,
-  //     paused: false,
-  //     remainingTime: { $ne: null },
-  //   });
+  @Cron(CronExpression.EVERY_SECOND)
+  async updateRemainingTime(): Promise<void> {
+    const timers = await this.timerModel.find({
+      isActive: true,
+      paused: false,
+      remainingTime: { $ne: null },
+    });
 
-  //   for (const timer of timers) {
-  //     if (timer.isActive && !timer.expired) {
-  //       if (timer.isInfinite) {
-  //         timer.remainingTime = this.addMinutesToTime(timer.remainingTime, 1);
-  //         timer.pricePerHour += timer.price / 60;
-  //       } else if (timer.remainingTime !== '00:00') {
-  //         timer.remainingTime = this.subtractMinutesFromTime(
-  //           timer.remainingTime,
-  //           1,
-  //         );
-  //         timer.pricePerHour += timer.price / 60;
-  //       } else {
-  //         timer.expired = true;
-  //         await this.createTimerHistoryByClub(timer);
-  //         this.scheduleClearTimer(timer._id);
-  //       }
-  //       await timer.save();
-  //     }
-  //   }
-  //   await this.timerHistoryService.removeTimerHistory(timers[0]?.club);
-  // }
+    for (const timer of timers) {
+      if (timer.isActive && !timer.expired) {
+        if (timer.isInfinite) {
+          timer.remainingTime = this.addMinutesToTime(timer.remainingTime, 1);
+          timer.pricePerHour += timer.price / 60;
+        } else if (timer.remainingTime !== '00:00') {
+          timer.remainingTime = this.subtractMinutesFromTime(
+            timer.remainingTime,
+            1,
+          );
+          timer.pricePerHour += timer.price / 60;
+        } else {
+          timer.expired = true;
+          await this.createTimerHistoryByClub(timer);
+          this.scheduleClearTimer(timer._id);
+        }
+        await timer.save();
+      }
+    }
+    await this.timerHistoryService.removeTimerHistory(timers[0]?.club);
+  }
   scheduleClearTimer(timerId: Types.ObjectId): Promise<void> {
     return new Promise((resolve) => {
       setTimeout(async () => {
