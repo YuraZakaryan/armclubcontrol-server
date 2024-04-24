@@ -157,6 +157,7 @@ export class ClubService {
     title: string,
     random: boolean,
     byRating: boolean,
+    sortByTimers: boolean,
   ) {
     const queryConditions: any = {};
 
@@ -174,12 +175,14 @@ export class ClubService {
 
     let query: any = this.clubModel.find(queryConditions);
 
-    if (random) {
-    } else if (byRating) {
+    if (byRating) {
       query = query.sort({});
+    } else if (sortByTimers) {
+      query = query.sort({ timers: -1 });
     } else {
       query = query.sort({ _id: -1 });
     }
+
     const totalItemsQuery = this.clubModel.find(queryConditions);
     const totalItems = await totalItemsQuery.countDocuments().exec();
 

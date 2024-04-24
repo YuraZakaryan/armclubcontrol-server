@@ -171,6 +171,11 @@ export class ClubController {
     type: 'boolean',
     required: false,
   })
+  @ApiQuery({
+    name: 'sortByTimers',
+    type: 'boolean',
+    required: false,
+  })
   @Get('all')
   getAll(
     @Query('limit') limit: number,
@@ -180,6 +185,7 @@ export class ClubController {
     @Query('title') title: string,
     @Query('random') random: boolean,
     @Query('byRating') byRating: boolean,
+    @Query('sortByTimers') sortByTimers: boolean,
   ) {
     return this.clubService.getAll(
       limit,
@@ -189,6 +195,7 @@ export class ClubController {
       title,
       random,
       byRating,
+      sortByTimers,
     );
   }
 

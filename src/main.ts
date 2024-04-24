@@ -4,22 +4,10 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { json, urlencoded } from 'express';
 import * as process from 'process';
 import { AppModule } from './app.module';
-import { NestMicroserviceOptions } from '@nestjs/common/interfaces/microservices/nest-microservice-options.interface';
-import { Transport } from '@nestjs/microservices';
 
 (async function () {
   const PORT: number = Number(process.env.PORT) || 5000;
-  const app = await NestFactory.createMicroservice<NestMicroserviceOptions>(
-    AppModule,
-    {
-      transport: Transport.REDIS,
-      options: {
-        host: 'localhost',
-        port: 6379,
-      },
-    },
-  );
-  // const app = await NestFactory.create<NestExpressApplication>(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
   // const AdminJS = await import('adminjs');
   // const AdminJSExpress = await import('@adminjs/express');
