@@ -1,3 +1,4 @@
+import { CacheInterceptor } from '@nestjs/cache-manager';
 import {
   Body,
   Controller,
@@ -9,23 +10,25 @@ import {
   Req,
   Res,
   UseGuards,
+  UseInterceptors,
   UsePipes,
   ValidationPipe,
 } from '@nestjs/common';
-import { CreateTimerDto } from './dto/create-timer.dto';
-import { Timer } from './timer.schema';
-import { TimerService } from './timer.service';
-import { Response } from 'express';
 import { ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { Response } from 'express';
 import { Types } from 'mongoose';
-import { UpdateTimerDto } from './dto/update-timer.dto';
-import { FindOneParams, TMessage } from '../types';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { MeDto } from '../auth/dto/me-dto';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { FindOneParams, TMessage } from '../types';
+import { CreateTimerDto } from './dto/create-timer.dto';
 import { StartTimerDto } from './dto/start-timer.dto';
 import { UpdateTimerInfoDto } from './dto/update-timer-info.dto';
+import { UpdateTimerDto } from './dto/update-timer.dto';
+import { Timer } from './timer.schema';
+import { TimerService } from './timer.service';
 
 @ApiTags('Timer')
+@UseInterceptors(CacheInterceptor)
 @Controller('/club/timer')
 export class TimerController {
   constructor(private timerService: TimerService) {}

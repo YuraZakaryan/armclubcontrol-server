@@ -1,6 +1,8 @@
-import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
+import { Cache, CACHE_MANAGER } from '@nestjs/cache-manager';
+import { HttpException, HttpStatus, Inject, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Cron, CronExpression } from '@nestjs/schedule';
+import { RedisStore } from 'cache-manager-redis-store';
 import { Response } from 'express';
 import { Model, Types } from 'mongoose';
 import { MeDto } from '../auth/dto/me-dto';
@@ -18,12 +20,17 @@ import { Timer } from './timer.schema';
 
 @Injectable()
 export class TimerService {
+  private readonly redisStore!: RedisStore;
+
   constructor(
+    @Inject(CACHE_MANAGER) private readonly cache: Cache,
     @InjectModel(Timer.name) private timerModel: Model<Timer>,
     @InjectModel(Club.name) private clubModel: Model<Club>,
     private timerHistoryService: TimerHistoryService,
     private timerGateway: TimerGateway,
-  ) {}
+  ) {
+    this.redisStore = cache.store as unknown as RedisStore;
+  }
 
   async create(dto: CreateTimerDto, res: Response): Promise<Timer> {
     const club = await this.clubModel.findById(dto.club);
@@ -171,32 +178,6 @@ export class TimerService {
     return timer;
   }
 
-  async setTimerEndTrigger() {
-    const timerEndTrigger = `
-      const pipeline = [
-        { $match: { operationType: 'update', 'updateDescription.updatedFields.end': { $exists: true } } },
-        { $lookup: { from: 'timers', localField: 'documentKey._id', foreignField: '_id', as: 'timer' } },
-        { $unwind: '$timer' },
-        { $project: { _id: '$timer._id', end: '$timer.end', clubId: '$timer.club' } }
-      ];
-
-      const changeStream = db.getCollection('timers').watch(pipeline);
-
-      changeStream.on('change', (change) => {
-        const currentTime = new Date();
-        const timerEnd = new Date(change.fullDocument.end);
-
-        if (currentTime.getTime() === timerEnd.getTime()) {
-          console.log('Таймер завершился в точности по времени сервера:', currentTime);
-        }
-
-        this.emitTimerUpdate(change.fullDocument.clubId);
-      });
-    `;
-
-    await this.timerModel.db.db.admin().command({ eval: timerEndTrigger });
-  }
-
   async stop(id: Types.ObjectId, req?: { user: MeDto }) {
     const timer = await this.timerModel.findById(id);
 
@@ -248,7 +229,11 @@ export class TimerService {
     }
 
     const startTime = getFormattedDate(new Date());
-    console.log(startTime);
+
+    if (startTime) {
+      const client = this.redisStore.getClient();
+      await client.HSET(timer.title, String(timer._id), JSON.stringify(timer));
+    }
 
     timer.isActive = true;
     // timer.start = startTime;
