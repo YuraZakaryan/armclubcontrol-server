@@ -30,6 +30,15 @@ export class TimerService {
     private timerGateway: TimerGateway,
   ) {
     this.redisStore = cache.store as unknown as RedisStore;
+    this.listenForKeyExpiry();
+  }
+
+  private async listenForKeyExpiry() {
+    const redisClient = this.redisStore.getClient();
+    redisClient.on('expired', (key: string) => {
+      console.log(`Key expired: ${key}`);
+      // Здесь вы можете выполнить дополнительные действия, например, запросить таймер из базы данных и напечатать его информацию в консоли
+    });
   }
 
   async create(dto: CreateTimerDto, res: Response): Promise<Timer> {
@@ -228,11 +237,12 @@ export class TimerService {
       throw new HttpException('Timer not found', HttpStatus.NOT_FOUND);
     }
 
-    const startTime = getFormattedDate(new Date());
+    const startTime: string = getFormattedDate(new Date());
 
     if (startTime) {
       const client = this.redisStore.getClient();
       await client.HSET(timer.title, String(timer._id), JSON.stringify(timer));
+      await client.PEXPIRE(timer.title, 10000);
     }
 
     timer.isActive = true;
