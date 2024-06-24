@@ -3,8 +3,6 @@ import { WebSocketGateway, WebSocketServer } from '@nestjs/websockets';
 import { Types } from 'mongoose';
 import { Server, Socket } from 'socket.io';
 import { WebsocketService } from 'src/websocket/websocket.service';
-import { Cache, CACHE_MANAGER } from '@nestjs/cache-manager';
-import Redis from 'ioredis';
 
 interface ICustomTicket extends Socket {
   timerInterval?: NodeJS.Timeout;
@@ -13,33 +11,7 @@ interface ICustomTicket extends Socket {
 @Injectable()
 @WebSocketGateway({ cors: true })
 export class TimerGateway implements OnModuleInit {
-  private readonly redisSubscriber: Redis;
-  private readonly redisClient: Redis;
-
-  constructor(
-    private websocketService: WebsocketService,
-    @Inject(CACHE_MANAGER) private readonly cache: Cache,
-  ) {
-    this.redisSubscriber = new Redis();
-    this.redisClient = new Redis();
-
-    this.redisSubscriber.psubscribe('__keyevent@0__:expired');
-    this.setupRedisEventHandlers();
-  }
-
-  private setupRedisEventHandlers() {
-    this.redisSubscriber.on(
-      'pmessage',
-      async (pattern, channel, expiredKey) => {
-        const expiredValue = await this.redisClient.get(expiredKey);
-        console.log(`Value of expired key ${expiredKey}:`, expiredValue);
-      },
-    );
-
-    this.redisSubscriber.on('error', (error) => {
-      console.error('Redis error:', error);
-    });
-  }
+  constructor(private websocketService: WebsocketService) {}
 
   @WebSocketServer()
   server: Server;

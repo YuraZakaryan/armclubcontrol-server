@@ -45,7 +45,6 @@ export class TimerController {
     @Body() dto: CreateTimerDto,
     @Res({ passthrough: true }) res: Response,
   ): Promise<Timer> {
-    console.log(dto);
     return this.timerService.create(dto, res);
   }
   @UseGuards(JwtAuthGuard)

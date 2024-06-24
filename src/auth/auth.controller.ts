@@ -23,6 +23,7 @@ import { JwtAuthGuard } from './jwt-auth.guard';
 @Controller('/auth')
 export class AuthController {
   constructor(private authService: AuthService) {}
+
   @UsePipes(ValidationPipe)
   @ApiOperation({ summary: 'login' })
   @ApiResponse({
@@ -53,7 +54,6 @@ export class AuthController {
     @Body() dto: CreateUserDto,
     @Res({ passthrough: true }) res: Response,
   ) {
-    console.log(dto);
     return this.authService.registration(dto, res);
   }
 

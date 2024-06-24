@@ -16,7 +16,6 @@ export class RefreshJwtGuard implements CanActivate {
     const token = this.extractTokenFromHeader(req);
 
     if (!token) throw new UnauthorizedException();
-    console.log(1111, token);
     try {
       // req.user = await this.userService.verifyRefreshToken(token);
     } catch {

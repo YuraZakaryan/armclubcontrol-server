@@ -1,8 +1,6 @@
-import { Cache, CACHE_MANAGER } from '@nestjs/cache-manager';
-import { HttpException, HttpStatus, Inject, Injectable } from '@nestjs/common';
+import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Cron, CronExpression } from '@nestjs/schedule';
-import { RedisStore } from 'cache-manager-redis-store';
 import { Response } from 'express';
 import { Model, Types } from 'mongoose';
 import { MeDto } from '../auth/dto/me-dto';
@@ -17,28 +15,66 @@ import { UpdateTimerInfoDto } from './dto/update-timer-info.dto';
 import { UpdateTimerDto } from './dto/update-timer.dto';
 import { TimerGateway } from './timer.gateway';
 import { Timer } from './timer.schema';
+import Redis from 'ioredis';
 
 @Injectable()
 export class TimerService {
-  private readonly redisStore!: RedisStore;
+  private redisClient: Redis;
+  private redisSubscriber: Redis;
 
   constructor(
-    @Inject(CACHE_MANAGER) private readonly cache: Cache,
     @InjectModel(Timer.name) private timerModel: Model<Timer>,
     @InjectModel(Club.name) private clubModel: Model<Club>,
     private timerHistoryService: TimerHistoryService,
     private timerGateway: TimerGateway,
   ) {
-    this.redisStore = cache.store as unknown as RedisStore;
-    this.listenForKeyExpiry();
+    this.redisClient = new Redis();
+    this.redisSubscriber = new Redis();
+
+    // Handle connection and subscription
+    this.redisSubscriber.on('connect', () => {
+      console.log('Connected to Redis (Subscriber)');
+
+      // Subscribe to '__keyevent@0__:expired' channel
+      this.redisSubscriber.subscribe('__keyevent@0__:expired', (err, count) => {
+        if (err) {
+          console.error('Error subscribing to Redis channel:', err);
+        } else {
+          console.log(
+            `Subscribed to '__keyevent@0__:expired' (Count: ${count})`,
+          );
+        }
+      });
+    });
+
+    // Handle errors for subscriber client
+    this.redisSubscriber.on('error', (error) => {
+      console.error('Redis connection error (Subscriber):', error);
+    });
+
+    // Handle message events for subscriber client (e.g., expiration handling)
+    this.redisSubscriber.on('pmessage', (pattern, channel, message) => {
+      try {
+        console.log(`Received message on channel '${channel}': ${message}`);
+        // Add logic to handle expired keys here
+      } catch (error) {
+        console.error('Error handling Redis pmessage:', error);
+      }
+    });
+
+    // Handle errors for regular command client
+    this.redisClient.on('error', (error) => {
+      console.error('Redis connection error (Regular):', error);
+    });
   }
 
-  private async listenForKeyExpiry() {
-    const redisClient = this.redisStore.getClient();
-    redisClient.on('expired', (key: string) => {
-      console.log(`Key expired: ${key}`);
-      // Здесь вы можете выполнить дополнительные действия, например, запросить таймер из базы данных и напечатать его информацию в консоли
-    });
+  private async handleExpiredKey(
+    pattern: string,
+    channel: string,
+    message: string,
+  ) {
+    console.log(`Key expired: ${message}`);
+    console.log('aaaaaaaaaaasd');
   }
 
   async create(dto: CreateTimerDto, res: Response): Promise<Timer> {
@@ -240,9 +276,12 @@ export class TimerService {
     const startTime: string = getFormattedDate(new Date());
 
     if (startTime) {
-      const client = this.redisStore.getClient();
-      await client.HSET(timer.title, String(timer._id), JSON.stringify(timer));
-      await client.PEXPIRE(timer.title, 10000);
+      await this.redisClient.hsetnx(
+        timer.title,
+        String(timer._id),
+        JSON.stringify(timer),
+      );
+      await this.redisClient.pexpire(timer.title, 10000);
     }
 
     timer.isActive = true;
@@ -299,35 +338,35 @@ export class TimerService {
     };
   }
 
-  @Cron(CronExpression.EVERY_SECOND)
-  async updateRemainingTime(): Promise<void> {
-    const timers = await this.timerModel.find({
-      isActive: true,
-      paused: false,
-      remainingTime: { $ne: null },
-    });
-
-    for (const timer of timers) {
-      if (timer.isActive && !timer.expired) {
-        if (timer.isInfinite) {
-          timer.remainingTime = this.addMinutesToTime(timer.remainingTime, 1);
-          timer.pricePerHour += timer.price / 60;
-        } else if (timer.remainingTime !== '00:00') {
-          timer.remainingTime = this.subtractMinutesFromTime(
-            timer.remainingTime,
-            1,
-          );
-          timer.pricePerHour += timer.price / 60;
-        } else {
-          timer.expired = true;
-          await this.createTimerHistoryByClub(timer);
-          this.scheduleClearTimer(timer._id);
-        }
-        await timer.save();
-      }
-    }
-    await this.timerHistoryService.removeTimerHistory(timers[0]?.club);
-  }
+  // @Cron(CronExpression.EVERY_SECOND)
+  // async updateRemainingTime(): Promise<void> {
+  //   const timers = await this.timerModel.find({
+  //     isActive: true,
+  //     paused: false,
+  //     remainingTime: { $ne: null },
+  //   });
+  //
+  //   for (const timer of timers) {
+  //     if (timer.isActive && !timer.expired) {
+  //       if (timer.isInfinite) {
+  //         timer.remainingTime = this.addMinutesToTime(timer.remainingTime, 1);
+  //         timer.pricePerHour += timer.price / 60;
+  //       } else if (timer.remainingTime !== '00:00') {
+  //         timer.remainingTime = this.subtractMinutesFromTime(
+  //           timer.remainingTime,
+  //           1,
+  //         );
+  //         timer.pricePerHour += timer.price / 60;
+  //       } else {
+  //         timer.expired = true;
+  //         await this.createTimerHistoryByClub(timer);
+  //         this.scheduleClearTimer(timer._id);
+  //       }
+  //       await timer.save();
+  //     }
+  //   }
+  //   await this.timerHistoryService.removeTimerHistory(timers[0]?.club);
+  // }
   scheduleClearTimer(timerId: Types.ObjectId): Promise<void> {
     return new Promise((resolve) => {
       setTimeout(async () => {
