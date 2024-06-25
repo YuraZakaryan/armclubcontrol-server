@@ -1,6 +1,7 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import * as mongoose from 'mongoose';
 import { HydratedDocument, Types } from 'mongoose';
+import { Moment } from 'moment'; // Check if this import is correct for Mongoose's Moment
 
 export type TimerDocument = HydratedDocument<Comment>;
 
@@ -15,8 +16,8 @@ export class Timer {
   @Prop({ default: false })
   isInfinite: boolean | null;
 
-  @Prop()
-  start: Date | null;
+  @Prop({ type: Date })
+  start: Moment | null;
 
   @Prop()
   end: string | null;

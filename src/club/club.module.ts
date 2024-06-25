@@ -22,6 +22,7 @@ import { User, UserSchema } from '../user/user.schema';
 import { ClubController } from './club.controller';
 import { Club, ClubSchema } from './club.schema';
 import { ClubService } from './club.service';
+import { TimerModule } from '../timer/timer.module';
 
 @Module({
   imports: [
@@ -34,13 +35,13 @@ import { ClubService } from './club.service';
       { name: TimerHistory.name, schema: TimerHistorySchema },
       { name: Rating.name, schema: RatingSchema },
     ]),
+    TimerModule,
   ],
   controllers: [ClubController],
   providers: [
     ClubService,
     FileService,
     CommentService,
-    TimerService,
     TimerHistoryService,
     RatingService,
     TimerGateway,

@@ -1,3 +1,5 @@
+import moment from 'moment';
+
 export const timeToMinutes = (time: string): number => {
   const [hours, minutes] = time.split(':').map(Number);
   return hours * 60 + minutes;
@@ -27,4 +29,8 @@ export const getFormattedDate = (
   };
   console.log(new Intl.DateTimeFormat('hy-AM', options).format(originalDate));
   return new Intl.DateTimeFormat('hy-AM', options).format(originalDate);
+};
+export const getDateAndTime = () => {
+  const currentTime = moment();
+  return { currentTime };
 };

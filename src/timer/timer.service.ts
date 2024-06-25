@@ -1,6 +1,5 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Cron, CronExpression } from '@nestjs/schedule';
 import { Response } from 'express';
 import { Model, Types } from 'mongoose';
 import { MeDto } from '../auth/dto/me-dto';
@@ -8,7 +7,7 @@ import { Club } from '../club/club.schema';
 import { checkAccess } from '../logic';
 import { TimerHistoryService } from '../timer-history/timer-history.service';
 import { FindOneParams, TMessage } from '../types';
-import { getFormattedDate, minutesToTime, timeToMinutes } from '../utils';
+import { getDateAndTime, minutesToTime, timeToMinutes } from '../utils';
 import { CreateTimerDto } from './dto/create-timer.dto';
 import { StartTimerDto } from './dto/start-timer.dto';
 import { UpdateTimerInfoDto } from './dto/update-timer-info.dto';
@@ -31,11 +30,19 @@ export class TimerService {
     this.redisClient = new Redis();
     this.redisSubscriber = new Redis();
 
-    // Handle connection and subscription
+    this.subscribeToRedisEvents();
+  }
+
+  onModuleDestroy() {
+    console.log('TimerService уничтожается');
+    this.redisClient.quit();
+    this.redisSubscriber.quit();
+  }
+
+  private subscribeToRedisEvents() {
     this.redisSubscriber.on('connect', () => {
       console.log('Connected to Redis (Subscriber)');
 
-      // Subscribe to '__keyevent@0__:expired' channel
       this.redisSubscriber.subscribe('__keyevent@0__:expired', (err, count) => {
         if (err) {
           console.error('Error subscribing to Redis channel:', err);
@@ -45,36 +52,24 @@ export class TimerService {
           );
         }
       });
-    });
 
-    // Handle errors for subscriber client
-    this.redisSubscriber.on('error', (error) => {
-      console.error('Redis connection error (Subscriber):', error);
-    });
-
-    // Handle message events for subscriber client (e.g., expiration handling)
-    this.redisSubscriber.on('pmessage', (pattern, channel, message) => {
-      try {
-        console.log(`Received message on channel '${channel}': ${message}`);
-        // Add logic to handle expired keys here
-      } catch (error) {
-        console.error('Error handling Redis pmessage:', error);
-      }
-    });
-
-    // Handle errors for regular command client
-    this.redisClient.on('error', (error) => {
-      console.error('Redis connection error (Regular):', error);
+      this.redisSubscriber.on('message', async (channel, key) => {
+        if (channel === '__keyevent@0__:expired') {
+          const timer = await this.timerModel.findById(new Types.ObjectId(key));
+          if (!timer) {
+            return;
+          }
+          await this.createTimerHistoryByClub(timer);
+          await this.timerHistoryService.removeTimerHistory(timer.club);
+        }
+      });
     });
   }
 
-  private async handleExpiredKey(
-    pattern: string,
-    channel: string,
-    message: string,
-  ) {
-    console.log(`Key expired: ${message}`);
-    console.log('aaaaaaaaaaasd');
+  async setKeyWithExpiry(key: Types.ObjectId, value: string, ttl: number) {
+    const keyString = String(key);
+    await this.redisClient.hset(keyString, keyString, value);
+    await this.redisClient.pexpire(keyString, ttl);
   }
 
   async create(dto: CreateTimerDto, res: Response): Promise<Timer> {
@@ -273,19 +268,14 @@ export class TimerService {
       throw new HttpException('Timer not found', HttpStatus.NOT_FOUND);
     }
 
-    const startTime: string = getFormattedDate(new Date());
+    const { currentTime } = getDateAndTime();
 
-    if (startTime) {
-      await this.redisClient.hsetnx(
-        timer.title,
-        String(timer._id),
-        JSON.stringify(timer),
-      );
-      await this.redisClient.pexpire(timer.title, 10000);
+    if (currentTime) {
+      await this.setKeyWithExpiry(timer._id, JSON.stringify(timer), 10000);
     }
 
     timer.isActive = true;
-    // timer.start = startTime;
+    timer.start = currentTime;
     if (!timer.isInfinite) {
       timer.end = this.calculateEndTime(dto.start, timer.remainingTime + ':00');
     }
@@ -377,20 +367,20 @@ export class TimerService {
   }
 
   async createTimerHistoryByClub(timer: any) {
-    if (timer.expired) {
-      await this.timerHistoryService.createTimerHistory({
-        timerId: timer._id,
-        title: timer.title,
-        time: timer.manuallyStopped ? timer.remainingTime : timer.defineTime,
-        isInfinite: timer.isInfinite,
-        start: timer.start,
-        end: timer.end,
-        price: timer.price,
-        finalPrice: timer.pricePerHour,
-        manuallyStopped: timer.manuallyStopped,
-        club: timer.club,
-      });
-    }
+    // if (timer.expired) {
+    await this.timerHistoryService.createTimerHistory({
+      timerId: timer._id,
+      title: timer.title,
+      time: timer.manuallyStopped ? timer.remainingTime : timer.defineTime,
+      isInfinite: timer.isInfinite,
+      start: timer.start,
+      end: timer.end,
+      price: timer.price,
+      finalPrice: timer.pricePerHour,
+      manuallyStopped: timer.manuallyStopped,
+      club: timer.club,
+    });
+    // }
   }
 
   async clear(id: Types.ObjectId): Promise<Timer> {

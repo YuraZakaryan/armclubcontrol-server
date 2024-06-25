@@ -27,5 +27,6 @@ import { TimerService } from './timer.service';
       { name: TimerHistory.name, schema: TimerHistorySchema },
     ]),
   ],
+  exports: [TimerService, TimerModule],
 })
 export class TimerModule {}
