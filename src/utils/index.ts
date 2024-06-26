@@ -1,4 +1,4 @@
-import moment from 'moment';
+import moment from 'moment-timezone';
 
 export const timeToMinutes = (time: string): number => {
   const [hours, minutes] = time.split(':').map(Number);
@@ -31,6 +31,6 @@ export const getFormattedDate = (
   return new Intl.DateTimeFormat('hy-AM', options).format(originalDate);
 };
 export const getDateAndTime = () => {
-  const currentTime = moment();
+  const currentTime: string = moment().tz('Asia/Yerevan').format();
   return { currentTime };
 };

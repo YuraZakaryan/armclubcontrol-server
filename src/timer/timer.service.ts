@@ -15,6 +15,7 @@ import { UpdateTimerDto } from './dto/update-timer.dto';
 import { TimerGateway } from './timer.gateway';
 import { Timer } from './timer.schema';
 import Redis from 'ioredis';
+import moment from 'moment-timezone';
 
 @Injectable()
 export class TimerService {
@@ -59,8 +60,8 @@ export class TimerService {
           if (!timer) {
             return;
           }
-          await this.createTimerHistoryByClub(timer);
-          await this.timerHistoryService.removeTimerHistory(timer.club);
+          // await this.createTimerHistoryByClub(timer);
+          // await this.timerHistoryService.removeTimerHistory(timer.club);
         }
       });
     });
@@ -218,6 +219,12 @@ export class TimerService {
     return timer;
   }
 
+  formatPlayedTime = (hours: number, minutes: number): string => {
+    const formattedHours = hours.toString().padStart(2, '0'); // Делаем часы двузначными
+    const formattedMinutes = minutes.toString().padStart(2, '0'); // Делаем минуты двузначными
+    return `${formattedHours}:${formattedMinutes}`;
+  };
+
   async stop(id: Types.ObjectId, req?: { user: MeDto }) {
     const timer = await this.timerModel.findById(id);
 
@@ -232,26 +239,37 @@ export class TimerService {
     if (!timer.isActive) {
       throw new HttpException('Timer is not active', HttpStatus.FORBIDDEN);
     }
+
+    // Calculate duration played
+    const { currentTime } = getDateAndTime();
+    const startTime = timer.start;
+    const duration = moment.duration(
+      moment(currentTime).diff(moment(startTime)),
+    );
+
+    const hoursPlayed = duration.hours();
+    const minutesPlayed = duration.minutes();
+    const totalPlayedTime = this.formatPlayedTime(hoursPlayed, minutesPlayed);
+
+    // Calculate price based on the price per hour
+    const pricePerHour = timer.price; // Example price per hour
+    const totalMinutesPlayed = hoursPlayed * 60 + minutesPlayed;
+    const totalPrice = Math.round((totalMinutesPlayed / 60) * pricePerHour);
+
     await this.scheduleClearTimer(timer._id);
 
-    // if (!timer.expired) {
-    //   // timer.end = this.calculateEndTime(
-    //   //   timer.start,
-    //   //   timer.remainingTime + ':00',
-    //   // );
-    //   timer.expired = true;
-    //   timer.manuallyStopped = true;
+    await this.createTimerHistoryByClub({
+      ...timer,
+      time: totalPlayedTime,
+      finalPrice: totalPrice,
+    });
 
-    //   await timer.save();
+    await this.timerHistoryService.removeTimerHistory(timer.club);
 
-    //   await this.scheduleClearTimer(timer._id);
-
-    //   await this.emitTimerUpdate(timer.club._id);
-    // }
-    // if (timer.expired && timer.manuallyStopped) {
-    //   await this.createTimerHistoryByClub(timer);
-    //   await this.timerHistoryService.removeTimerHistory(timer.club);
-    // }
+    return {
+      playedTime: totalPlayedTime,
+      price: totalPrice,
+    };
   }
 
   async start(id: Types.ObjectId, dto: StartTimerDto, req?: { user: MeDto }) {
@@ -277,7 +295,7 @@ export class TimerService {
     timer.isActive = true;
     timer.start = currentTime;
     if (!timer.isInfinite) {
-      timer.end = this.calculateEndTime(dto.start, timer.remainingTime + ':00');
+      timer.end = this.calculateEndTime(currentTime, timer.remainingTime);
     }
     const savedTimer = await timer.save();
     if (savedTimer) {
@@ -309,12 +327,42 @@ export class TimerService {
 
     if (!timer.isInfinite) {
       if (timer.paused) {
+        timer.pausedEndTime = moment().format();
         timer.end = null;
       } else {
-        timer.end = this.calculateEndTime(
-          dto.start,
-          timer.remainingTime + ':00',
-        );
+        const { currentTime } = getDateAndTime();
+        const startTime: string = timer.start;
+        const pausedEndTime: string = timer.pausedEndTime;
+
+        if (startTime && pausedEndTime) {
+          const totalPausedDuration = moment.duration(
+            moment(currentTime).diff(moment(pausedEndTime)),
+          );
+
+          const elapsedHours = totalPausedDuration.hours();
+          const elapsedMinutes = totalPausedDuration.minutes();
+
+          const [remainingHours, remainingMinutes] = timer.remainingTime
+            .split(':')
+            .map(Number);
+
+          let adjustedHours = remainingHours - elapsedHours;
+          let adjustedMinutes = remainingMinutes - elapsedMinutes;
+
+          if (adjustedMinutes < 0) {
+            adjustedHours -= 1;
+            adjustedMinutes += 60;
+          }
+
+          timer.end = this.calculateEndTime(
+            currentTime,
+            formatTime(adjustedHours, adjustedMinutes),
+          );
+
+          timer.pausedEndTime = null;
+
+          await timer.save();
+        }
       }
     }
     const savedTimer = await timer.save();
@@ -396,6 +444,8 @@ export class TimerService {
       expired: false,
       manuallyStopped: false,
       defineTime: null,
+      playTimestamps: [],
+      pausedEndTime: null,
     });
     if (!timer) {
       throw new HttpException('Timer not found', HttpStatus.NOT_FOUND);
@@ -469,32 +519,16 @@ export class TimerService {
     return timers.deletedCount;
   }
 
-  calculateEndTime(startTime: string, remainingTime: string) {
-    const [startHours, startMinutes, startSeconds] = startTime
-      .split(':')
-      .map(Number);
-    const [remainingHours, remainingMinutes, remainingSeconds] = remainingTime
-      .split(':')
-      .map(Number);
-    const startDate = new Date();
-    startDate.setHours(startHours);
-    startDate.setMinutes(startMinutes);
-    startDate.setSeconds(startSeconds);
-
-    const remainingMilliseconds =
-      (remainingHours * 3600 + remainingMinutes * 60 + remainingSeconds) * 1000;
-
-    const endDate = new Date(startDate.getTime() + remainingMilliseconds);
-
-    const endHours = endDate.getHours();
-    const endMinutes = endDate.getMinutes();
-    const endSeconds = endDate.getSeconds();
-
-    return `${String(endHours).padStart(2, '0')}:${String(endMinutes).padStart(
-      2,
-      '0',
-    )}:${String(endSeconds).padStart(2, '0')}`;
-  }
+  calculateEndTime = (startTime: string, remainingTime: string) => {
+    const [hours, minutes] = remainingTime.split(':').map(Number);
+    const startMoment = moment.tz(
+      startTime,
+      'YYYY-MM-DDTHH:mm:ssZ',
+      'Asia/Yerevan',
+    );
+    const endMoment = startMoment.add(hours, 'hours').add(minutes, 'minutes');
+    return endMoment.format('YYYY-MM-DDTHH:mm:ssZ');
+  };
 
   async emitTimerUpdate(clubId: Types.ObjectId): Promise<void> {
     const timers = await this.getOne(clubId);
@@ -517,3 +551,8 @@ export class TimerService {
     }
   }
 }
+export const formatTime = (hours: number, minutes: number) => {
+  const formattedHours = hours.toString().padStart(2, '0');
+  const formattedMinutes = minutes.toString().padStart(2, '0');
+  return `${formattedHours}:${formattedMinutes}`;
+};
